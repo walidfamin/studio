@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { accounts, transactions } from "@/lib/data";
 import { Download, Upload } from "lucide-react";
+import Link from "next/link";
 
 export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
     const account = accounts.find(a => a.id === params.accountId);
@@ -21,7 +22,11 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         </div>
         <div className="flex items-center gap-2">
             <Button variant="outline"><Upload className="mr-2 h-4 w-4"/> Import</Button>
-            <Button variant="outline"><Download className="mr-2 h-4 w-4"/> Export</Button>
+            <Button variant="outline" asChild>
+                <Link href="/transactions-template.csv" download>
+                    <Download className="mr-2 h-4 w-4"/> Export
+                </Link>
+            </Button>
         </div>
       </header>
       
