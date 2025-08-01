@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 
 
@@ -274,25 +273,22 @@ export default function AccountDetailPage() {
         setCustomCategory('');
     }
 
-    const chartData = useMemo(() => {
-        const monthlyData: Record<string, {name: string, income: number, expense: number}> = {};
-
-        transactions
-            .filter(t => t.category !== 'Uncategorized' && t.category !== 'Credit Card Payment')
-            .forEach(t => {
-                const month = format(parseISO(t.date), 'MMM');
-                if (!monthlyData[month]) {
-                    monthlyData[month] = { name: month, income: 0, expense: 0 };
+    const spendingByCategoryChartData = useMemo(() => {
+        const spending = transactions
+            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized')
+            .reduce((acc, t) => {
+                if (!acc[t.category]) {
+                    acc[t.category] = 0;
                 }
-                if (t.type === 'income') {
-                    monthlyData[month].income += t.amount;
-                } else {
-                    monthlyData[month].expense += t.amount;
-                }
-            });
+                acc[t.category] += t.amount;
+                return acc;
+            }, {} as Record<string, number>);
 
-        return Object.values(monthlyData);
+        return Object.entries(spending)
+            .map(([category, total]) => ({ category, total }))
+            .sort((a, b) => b.total - a.total);
     }, [transactions]);
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -349,25 +345,29 @@ export default function AccountDetailPage() {
         )}
          <Card className="col-span-full">
             <CardHeader>
-                <CardTitle>Payment History</CardTitle>
-                <CardDescription>Income vs Expenses for categorized transactions.</CardDescription>
+                <CardTitle>Spending by Category</CardTitle>
+                <CardDescription>A breakdown of your expenses by category.</CardDescription>
             </CardHeader>
             <CardContent>
-                {chartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={240}>
-                         <ComposedChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
+                {spendingByCategoryChartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={spendingByCategoryChartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                            <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
+                            <YAxis 
+                                type="category" 
+                                dataKey="category" 
+                                width={120}
+                                tick={{ fontSize: 12 }}
+                                interval={0}
+                            />
                             <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                            <Legend />
-                            <Bar dataKey="income" fill="hsl(var(--chart-1))" name="Income" />
-                            <Bar dataKey="expense" fill="hsl(var(--chart-2))" name="Expense" />
-                        </ComposedChart>
+                            <Bar dataKey="total" fill="hsl(var(--chart-2))" name="Total Spent" />
+                        </BarChart>
                     </ResponsiveContainer>
                 ) : (
                     <div className="h-60 bg-muted rounded-md flex items-center justify-center">
-                        <p className="text-muted-foreground">Categorize transactions to see the chart</p>
+                        <p className="text-muted-foreground">Categorize expense transactions to see the chart</p>
                     </div>
                 )}
             </CardContent>
@@ -457,3 +457,5 @@ export default function AccountDetailPage() {
     </div>
   )
 }
+
+    
