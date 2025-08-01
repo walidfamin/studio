@@ -3,53 +3,50 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { accounts, transactions as initialTransactions } from "@/lib/data";
-import { Download, Upload } from "lucide-react";
+import { Download, Upload, Edit } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useParams } from "next/navigation";
-import { Transaction } from "@/lib/types";
+import { Transaction, Account } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import * as XLSX from 'xlsx';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
+
 
 function parseFlexibleDate(dateStr: string | number): Date {
     if (typeof dateStr === 'number') {
-        // Handle Excel's serial date number
         const excelEpoch = new Date(Date.UTC(1899, 11, 30));
         return new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
     }
     
     if (typeof dateStr === 'string') {
-        // Updated to handle DD/MM/YYYY and DD/MM/YY
         if (dateStr.includes('/')) {
             const parts = dateStr.split('/');
             if (parts.length === 3) {
                 const day = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JS
+                const month = parseInt(parts[1], 10) - 1;
                 let year = parseInt(parts[2], 10);
 
                 if (year < 100) {
-                    // Handles 'YY' format, assumes 21st century
                     year += 2000;
                 }
                 
-                // Create date in UTC to avoid timezone issues
                 const date = new Date(Date.UTC(year, month, day));
 
-                // Basic validation: Check if the constructed date parts match the input
-                // This helps catch errors like `13/01/2024` being parsed as `01/01/2025` if month was > 12.
                 if (date.getUTCDate() === day && date.getUTCMonth() === month && date.getUTCFullYear() === year) {
                     return date;
                 }
             }
         }
     }
-    // Fallback for ISO 8601 or other standard formats that new Date() can handle
     const fallbackDate = new Date(dateStr);
     if (!isNaN(fallbackDate.getTime())) {
         return fallbackDate;
     }
-    // Return an invalid date if all parsing fails
     return new Date('invalid');
 }
 
@@ -57,17 +54,30 @@ function parseFlexibleDate(dateStr: string | number): Date {
 export default function AccountDetailPage() {
     const params = useParams();
     const accountId = params.accountId as string;
-    const account = accounts.find(a => a.id === accountId);
     
+    const [account, setAccount] = useState<Account | undefined>(accounts.find(a => a.id === accountId));
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string>('');
 
     useEffect(() => {
         if (accountId) {
-            // Filter initial transactions for the current account
             const accountTransactions = initialTransactions.filter(t => t.accountId === accountId);
             setTransactions(accountTransactions);
         }
     }, [accountId]);
+    
+    useEffect(() => {
+        if (account) {
+            const balance = transactions.reduce((acc, t) => {
+                if (t.type === 'income') return acc + t.amount;
+                if (t.type === 'expense') return acc - t.amount;
+                return acc;
+            }, 0);
+            setAccount(prev => prev ? { ...prev, balance } : undefined);
+        }
+    }, [transactions]);
+
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -82,11 +92,9 @@ export default function AccountDetailPage() {
 
     const processData = (data: any[][]) => {
         try {
-            // Remove header row by slicing from the first index
             const rows = data.slice(1);
             
             const newTransactions: Transaction[] = rows.map((row, index) => {
-                // The original row number in the file is index + 2 (since index is 0-based and we sliced off the header)
                 const originalRowNumber = index + 2;
 
                 if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) {
@@ -186,6 +194,42 @@ export default function AccountDetailPage() {
         };
     };
 
+    const handleSaveCategory = () => {
+        if (!editingTransaction || !selectedCategory) return;
+        
+        setTransactions(prev => 
+            prev.map(t => 
+                t.id === editingTransaction.id ? { ...t, category: selectedCategory } : t
+            )
+        );
+        setEditingTransaction(null);
+        setSelectedCategory('');
+
+        toast({
+            title: "Transaction Updated",
+            description: "The transaction category has been saved.",
+        });
+    };
+    
+    const handleEditClick = (transaction: Transaction) => {
+        setEditingTransaction(transaction);
+        setSelectedCategory(transaction.category);
+    };
+
+    const chartData = transactions
+        .filter(t => t.category !== 'Uncategorized')
+        .reduce((acc, t) => {
+            const month = new Date(t.date).toLocaleString('default', { month: 'short' });
+            if (!acc[month]) {
+                acc[month] = { name: month, income: 0, expense: 0 };
+            }
+            if (t.type === 'income') {
+                acc[month].income += t.amount;
+            } else {
+                acc[month].expense += t.amount;
+            }
+            return acc;
+        }, {} as Record<string, {name: string, income: number, expense: number}>);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -222,13 +266,27 @@ export default function AccountDetailPage() {
         </Card>
          <Card className="col-span-2">
             <CardHeader>
-                <CardTitle>Payment History (Chart Placeholder)</CardTitle>
-                <CardDescription>A chart showing payment history will be displayed here.</CardDescription>
+                <CardTitle>Payment History</CardTitle>
+                <CardDescription>Income vs Expenses for categorized transactions.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="h-60 bg-muted rounded-md flex items-center justify-center">
-                    <p className="text-muted-foreground">Chart coming soon</p>
-                </div>
+                {Object.values(chartData).length > 0 ? (
+                    <ResponsiveContainer width="100%" height={240}>
+                         <ComposedChart data={Object.values(chartData)}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                            <Legend />
+                            <Bar dataKey="income" fill="hsl(var(--chart-1))" name="Income" />
+                            <Bar dataKey="expense" fill="hsl(var(--chart-2))" name="Expense" />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="h-60 bg-muted rounded-md flex items-center justify-center">
+                        <p className="text-muted-foreground">Categorize transactions to see the chart</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
@@ -241,14 +299,22 @@ export default function AccountDetailPage() {
                     {transactions.length > 0 ? (
                         transactions.map(t => (
                             <li key={t.id} className="flex justify-between items-center py-2 border-b">
-                                <div>
-                                    <p className="font-medium">{t.description}</p>
-                                    <p className="text-sm text-muted-foreground">{new Date(t.date).toLocaleDateString()}</p>
-
+                                <div className="flex items-center gap-4">
+                                     <div>
+                                        <p className="font-medium">{t.description}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {new Date(t.date).toLocaleDateString()} - <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.category === 'Uncategorized' ? 'bg-gray-200 text-gray-800' : 'bg-blue-100 text-blue-800'}`}>{t.category}</span>
+                                        </p>
+                                    </div>
                                 </div>
-                                <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                                    {formatCurrency(t.type === 'expense' ? -t.amount : t.amount)}
-                                </p>
+                                <div className="flex items-center gap-4">
+                                    <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                                        {formatCurrency(t.type === 'expense' ? -t.amount : t.amount)}
+                                    </p>
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(t)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </li>
                         ))
                     ) : (
@@ -258,6 +324,39 @@ export default function AccountDetailPage() {
             </CardContent>
         </Card>
       </div>
+
+       <Dialog open={!!editingTransaction} onOpenChange={(isOpen) => !isOpen && setEditingTransaction(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Categorize Transaction</DialogTitle>
+                    <DialogDescription>
+                        Select a category for: "{editingTransaction?.description}"
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="category">Category</Label>
+                    <Select onValueChange={setSelectedCategory} defaultValue={selectedCategory}>
+                        <SelectTrigger id="category">
+                            <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Lifestyle">Lifestyle</SelectItem>
+                            <SelectItem value="Investment">Investment</SelectItem>
+                            <SelectItem value="Spends">Spends</SelectItem>
+                            <SelectItem value="Food">Food</SelectItem>
+                            <SelectItem value="Transport">Transportation</SelectItem>
+                            <SelectItem value="Groceries">Groceries</SelectItem>
+                            <SelectItem value="Salary">Salary</SelectItem>
+                            <SelectItem value="Rent/Mortgage">Rent/Mortgage</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditingTransaction(null)}>Cancel</Button>
+                    <Button onClick={handleSaveCategory}>Save</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   )
 }
