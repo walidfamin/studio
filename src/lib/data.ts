@@ -96,14 +96,14 @@ export const categorySpending = [
 
 export const accounts: Account[] = [
     // ADCB Accounts
-    { id: 'adcb_credit', name: 'Credit Card', balance: -3300.00, type: 'Credit Card', bank: 'ADCB' },
-    { id: 'adcb_saving', name: 'Saving Account', balance: 4700.00, type: 'Saving Account', bank: 'ADCB' },
-    { id: 'adcb_current', name: 'Current Account', balance: 3475.00, type: 'Current Account', bank: 'ADCB' },
-    { id: 'adcb_esaving', name: 'E Saving Account', balance: 12500.00, type: 'E Saving Account', bank: 'ADCB' },
+    { id: 'adcb_credit', name: 'Credit Card', balance: 0, type: 'Credit Card', bank: 'ADCB' },
+    { id: 'adcb_saving', name: 'Saving Account', balance: 0, type: 'Saving Account', bank: 'ADCB' },
+    { id: 'adcb_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'ADCB' },
+    { id: 'adcb_esaving', name: 'E Saving Account', balance: 0, type: 'E Saving Account', bank: 'ADCB' },
 
     // FAB BANK Accounts
-    { id: 'fab_current', name: 'Current Account', balance: 8250.00, type: 'Current Account', bank: 'FAB BANK' },
+    { id: 'fab_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'FAB BANK' },
 
     // RAK BANK Accounts
-    { id: 'rak_current', name: 'Current Account', balance: 1500.00, type: 'Current Account', bank: 'RAK BANK' },
+    { id: 'rak_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'RAK BANK' },
 ];
