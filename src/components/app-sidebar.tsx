@@ -1,7 +1,8 @@
 
+
 'use client';
 import { Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarTrigger } from '@/components/ui/sidebar';
-import { TreePalm, Landmark, BarChart, Banknote, Settings, LifeBuoy, ChevronDown, BadgePercent, Building, Home, CreditCard, PiggyBank, PlusCircle } from 'lucide-react';
+import { TreePalm, Landmark, BarChart, Banknote, Settings, LifeBuoy, ChevronDown, BadgePercent, Building, Home, CreditCard, PiggyBank, PlusCircle, List } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { accounts } from '@/lib/data';
@@ -41,6 +42,14 @@ export default function AppSidebar() {
               <Link href="/">
                 <BarChart />
                 <span>Dashboard</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname.startsWith('/transactions')}>
+              <Link href="/transactions">
+                <List />
+                <span>Transactions</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
