@@ -1,17 +1,39 @@
+'use client';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { accounts, transactions } from "@/lib/data";
 import { Download, Upload } from "lucide-react";
 import Link from "next/link";
+import { useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
     const account = accounts.find(a => a.id === params.accountId);
     const accountTransactions = transactions.filter(t => t.accountId === params.accountId);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast();
 
     if (!account) {
         return <div className="p-8">Account not found.</div>
     }
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            // Here you would typically handle the file upload and parsing.
+            // For now, we'll just show a toast notification.
+            toast({
+                title: "File Selected",
+                description: `${file.name} is ready for import.`,
+            });
+        }
+    };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -21,7 +43,14 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             <p className="text-lg text-muted-foreground">{account.bank}</p>
         </div>
         <div className="flex items-center gap-2">
-            <Button variant="outline"><Upload className="mr-2 h-4 w-4"/> Import</Button>
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                onChange={handleFileChange}
+                accept=".csv"
+            />
+            <Button variant="outline" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4"/> Import</Button>
             <Button variant="outline" asChild>
                 <Link href="/transactions-template.csv" download>
                     <Download className="mr-2 h-4 w-4"/> Export
