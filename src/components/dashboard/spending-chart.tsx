@@ -1,6 +1,6 @@
 'use client';
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, Tooltip } from 'recharts';
 import {
   Card,
   CardContent,
@@ -8,8 +8,27 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import {
+  ChartContainer,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { spendingData } from '@/lib/data';
+
+const chartConfig = {
+  lifestyle: {
+    label: 'Lifestyle',
+    color: 'hsl(var(--chart-1))',
+  },
+  investment: {
+    label: 'Investment',
+    color: 'hsl(var(--chart-2))',
+  },
+  spends: {
+    label: 'Spends',
+    color: 'hsl(var(--chart-3))',
+  },
+} satisfies ChartConfig;
 
 export function SpendingChart() {
   return (
@@ -20,31 +39,39 @@ export function SpendingChart() {
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={spendingData}>
-              <XAxis
-                dataKey="name"
-                stroke="#888888"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="#888888"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `$${value}`}
-              />
+          <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+            <BarChart
+              accessibilityLayer
+              data={spendingData}
+              margin={{
+                left: 12,
+                right: 12,
+              }}
+            >
               <Tooltip
                 cursor={{ fill: 'hsl(var(--muted))' }}
-                content={<ChartTooltipContent />}
+                content={<ChartTooltipContent hideLabel />}
               />
-              <Bar dataKey="lifestyle" stackId="a" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="investment" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="spends" stackId="a" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="lifestyle"
+                stackId="a"
+                fill="var(--color-lifestyle)"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="investment"
+                stackId="a"
+                fill="var(--color-investment)"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="spends"
+                stackId="a"
+                fill="var(--color-spends)"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
-          </ResponsiveContainer>
+          </ChartContainer>
         </div>
       </CardContent>
     </Card>
