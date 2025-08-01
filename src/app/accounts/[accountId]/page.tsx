@@ -198,11 +198,11 @@ export default function AccountDetailPage() {
 
     const handleSaveCategory = () => {
         if (!editingTransaction) return;
-        
-        const finalCategory = selectedCategory === 'Other' ? customCategory : selectedCategory;
+
+        const finalCategory = selectedCategory === 'Other' ? customCategory.trim() : selectedCategory;
 
         if (!finalCategory) {
-             toast({
+            toast({
                 variant: "destructive",
                 title: "Category not selected",
                 description: "Please select or enter a category.",
@@ -210,18 +210,27 @@ export default function AccountDetailPage() {
             return;
         }
 
-        setTransactions(prev => 
-            prev.map(t => 
-                t.id === editingTransaction.id ? { ...t, category: finalCategory } : t
-            )
-        );
+        let updatedCount = 0;
+        setTransactions(prev => {
+            const newTransactions = prev.map(t => {
+                if (t.id === editingTransaction.id || (t.description === editingTransaction.description && t.category === 'Uncategorized')) {
+                    if (t.category !== finalCategory) {
+                        updatedCount++;
+                    }
+                    return { ...t, category: finalCategory };
+                }
+                return t;
+            });
+            return newTransactions;
+        });
+
         setEditingTransaction(null);
         setSelectedCategory('');
         setCustomCategory('');
 
         toast({
-            title: "Transaction Updated",
-            description: "The transaction category has been saved.",
+            title: "Transactions Updated",
+            description: `${updatedCount} transaction(s) have been categorized as "${finalCategory}".`,
         });
     };
     
