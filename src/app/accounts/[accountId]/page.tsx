@@ -9,8 +9,9 @@ import { useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
-    const account = accounts.find(a => a.id === params.accountId);
-    const accountTransactions = transactions.filter(t => t.accountId === params.accountId);
+    const { accountId } = params;
+    const account = accounts.find(a => a.id === accountId);
+    const accountTransactions = transactions.filter(t => t.accountId === accountId);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
