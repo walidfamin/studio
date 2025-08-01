@@ -23,7 +23,11 @@ export default function AppSidebar() {
   const pathname = usePathname();
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(amount);
+    const formatter = new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' });
+    if (amount < 0) {
+      return `-${formatter.format(Math.abs(amount))}`;
+    }
+    return formatter.format(amount);
   };
 
   return (
