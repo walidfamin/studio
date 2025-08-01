@@ -10,15 +10,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
-import { SavingsChart } from '@/components/dashboard/savings-chart';
-import { IncomeChart } from '@/components/dashboard/income-chart';
-import { ExpenseChart } from '@/components/dashboard/expense-chart';
-import { RecentPayments } from '@/components/dashboard/recent-payments';
-import { MonthlyProfits } from '@/components/dashboard/monthly-profits';
-import { MostPayments } from '@/components/dashboard/most-payments';
-import { ShopifyPayments } from '@/components/dashboard/shopify-payments';
-import { Input } from '@/components/ui/input';
+import { TransactionsOverTime } from '@/components/dashboard/transactions-over-time';
+import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { SpendingBreakdown } from '@/components/dashboard/spending-breakdown';
+import { IncomeTracker } from '@/components/dashboard/income-tracker';
+import { CreditCardUsage } from '@/components/dashboard/credit-card-usage';
+import { AccountOverview } from '@/components/dashboard/overview';
+
+import { Input } from '@/components/ui/input';
 
 
 export default function DashboardPage() {
@@ -50,25 +49,20 @@ export default function DashboardPage() {
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-3">
-                <SavingsChart />
+                <TransactionsOverTime />
             </div>
-            <div className="lg:col-span-1">
-                <IncomeChart />
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <AccountOverview />
+                <div className="space-y-6">
+                  <IncomeTracker />
+                  <CreditCardUsage />
+                </div>
             </div>
-            <div className="lg:col-span-2">
-                <ExpenseChart />
-            </div>
-             <div className="lg:col-span-3">
-                <RecentPayments />
-            </div>
-            <div className="lg:col-span-1">
+             <div className="lg:col-span-1">
                 <SpendingBreakdown />
             </div>
-            <div className="lg:col-span-1">
-                <MonthlyProfits />
-            </div>
-            <div className="lg:col-span-1">
-                <ShopifyPayments />
+             <div className="lg:col-span-3">
+                <RecentTransactions />
             </div>
         </div>
       </main>

@@ -1,3 +1,5 @@
+
+'use client';
 import {
   Card,
   CardContent,
@@ -7,17 +9,22 @@ import {
 } from '@/components/ui/card';
 import { Landmark, Wallet, CreditCard, PiggyBank, PlusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { accounts } from '@/lib/data';
+import { accounts, transactions } from '@/lib/data';
 import { Button } from '../ui/button';
-
-const accountIcons = {
-  bank: <Landmark className="w-5 h-5 text-accent" />,
-  credit: <CreditCard className="w-5 h-5 text-accent" />,
-  investment: <PiggyBank className="w-5 h-5 text-accent" />,
-}
+import Link from 'next/link';
+import { formatCurrency } from '@/lib/utils';
+import Image from 'next/image';
 
 export function AccountOverview() {
-  const totalBalance = accounts.reduce((sum, acc) => acc.type !== 'credit' ? sum + acc.balance : sum, 0);
+  const totalNetWorth = accounts.reduce((sum, account) => {
+    const accountTransactions = transactions.filter(t => t.accountId === account.id);
+    const balance = accountTransactions.reduce((acc, t) => {
+        if (t.type === 'income') return acc + t.amount;
+        if (t.type === 'expense') return acc - t.amount;
+        return acc;
+    }, 0);
+    return sum + balance;
+  }, 0);
 
   return (
     <Card className="md:col-span-2">
@@ -29,26 +36,38 @@ export function AccountOverview() {
           </CardTitle>
           <CardDescription>All your connected accounts.</CardDescription>
         </div>
-        <Button variant="ghost" size="sm">
-          <PlusCircle className="mr-2"/>
-          Add Account
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/accounts/new">
+            <PlusCircle className="mr-2"/>
+            Add Account
+          </Link>
         </Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {accounts.map((account) => (
-            <div key={account.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {accountIcons[account.type]}
-                <p className="text-sm font-medium">{account.name}</p>
-              </div>
-              <p className="text-sm font-semibold">{account.balance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</p>
-            </div>
-          ))}
+          {accounts.map((account) => {
+            const balance = transactions.filter(t => t.accountId === account.id).reduce((acc, t) => {
+                if (t.type === 'income') return acc + t.amount;
+                if (t.type === 'expense') return acc - t.amount;
+                return acc;
+            }, 0);
+
+            return (
+                 <Link href={`/accounts/${account.id}`} key={account.id} className="flex items-center justify-between hover:bg-muted/50 p-2 rounded-md">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                            <Image src={`https://logo.clearbit.com/${account.bank.split(' ')[0].toLowerCase()}.com`} alt={account.bank} width={20} height={20} className="rounded-full" onError={(e) => e.currentTarget.style.display = 'none'} />
+                        </div>
+                        <p className="text-sm font-medium">{account.name}</p>
+                    </div>
+                    <p className="text-sm font-semibold">{formatCurrency(balance)}</p>
+                </Link>
+            )
+          })}
           <Separator />
           <div className="flex items-center justify-between font-bold text-lg">
             <p>Total Net Worth</p>
-            <p>{totalBalance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</p>
+            <p>{formatCurrency(totalNetWorth)}</p>
           </div>
         </div>
       </CardContent>

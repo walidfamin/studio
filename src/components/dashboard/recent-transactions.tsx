@@ -1,3 +1,4 @@
+
 import {
   Card,
   CardContent,
@@ -17,16 +18,24 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { transactions } from '@/lib/data';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
+import Link from 'next/link';
+import { Button } from '../ui/button';
 
 
 export function RecentTransactions() {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="font-headline">Recent Transactions</CardTitle>
-        <CardDescription>
-          A log of your recent income and expenses.
-        </CardDescription>
+      <CardHeader className="flex-row justify-between items-center">
+        <div>
+          <CardTitle className="font-headline">Recent Transactions</CardTitle>
+          <CardDescription>
+            A log of your recent income and expenses.
+          </CardDescription>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/transactions">View All</Link>
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>
@@ -60,11 +69,18 @@ export function RecentTransactions() {
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">{transaction.category}</TableCell>
                 <TableCell className="hidden md:table-cell">{format(new Date(transaction.date), 'PP')}</TableCell>
-                <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-foreground'}`}>
-                    {transaction.type === 'income' ? '+' : '-'}{transaction.amount.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
+                <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-600' : ''}`}>
+                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                 </TableCell>
               </TableRow>
             ))}
+             {transactions.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        No transactions yet. Import a statement to get started.
+                    </TableCell>
+                </TableRow>
+             )}
           </TableBody>
         </Table>
       </CardContent>
