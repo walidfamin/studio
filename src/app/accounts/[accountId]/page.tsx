@@ -7,9 +7,11 @@ import { Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useParams } from "next/navigation";
 
-export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
-    const { accountId } = params;
+export default function AccountDetailPage() {
+    const params = useParams();
+    const accountId = params.accountId as string;
     const account = accounts.find(a => a.id === accountId);
     const accountTransactions = transactions.filter(t => t.accountId === accountId);
     const fileInputRef = useRef<HTMLInputElement>(null);
