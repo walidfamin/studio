@@ -9,10 +9,12 @@ import { properties } from "@/lib/data";
 import { Property } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format, formatDistanceToNow } from 'date-fns';
-import { ChevronLeft, Edit, Building, MapPin, Landmark, Banknote, Users } from "lucide-react";
+import { ChevronLeft, Edit, Building, MapPin, Landmark, Banknote, Users, CalendarDays, BadgeCheck, BadgeX } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 
 export default function PropertyDetailPage() {
@@ -67,12 +69,12 @@ export default function PropertyDetailPage() {
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-3">
                     <Card>
                         <CardHeader>
                             <CardTitle>Financial Summary</CardTitle>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="space-y-1">
                                 <p className="text-sm text-muted-foreground">Total Value</p>
                                 <p className="text-2xl font-bold">{formatCurrency(property.totalValue)}</p>
@@ -84,7 +86,9 @@ export default function PropertyDetailPage() {
                             <div className="space-y-1">
                                 <p className="text-sm text-muted-foreground">Payment Method</p>
                                 <p className="text-lg font-medium capitalize flex items-center gap-2">
-                                    {property.paymentType === 'mortgage' ? <Landmark className="w-5 h-5 text-accent"/> : <Banknote className="w-5 h-5 text-accent" />}
+                                    {property.paymentType === 'mortgage' && <Landmark className="w-5 h-5 text-accent" />}
+                                    {property.paymentType === 'cash' && <Banknote className="w-5 h-5 text-accent" />}
+                                    {property.paymentType === 'installment' && <CalendarDays className="w-5 h-5 text-accent" />}
                                     {property.paymentType}
                                 </p>
                             </div>
@@ -100,7 +104,7 @@ export default function PropertyDetailPage() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="lg:col-span-1 space-y-6">
+                <div className="lg:col-span-3 space-y-6">
                      {property.paymentType === 'mortgage' && (
                         <Card>
                             <CardHeader>
@@ -132,10 +136,41 @@ export default function PropertyDetailPage() {
                             </CardContent>
                         </Card>
                     )}
+                    {property.paymentType === 'installment' && property.paymentPlan && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Installment Plan</CardTitle>
+                            </CardHeader>
+                             <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                            <TableHead className="text-center">Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {property.paymentPlan.map((p, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell>{format(new Date(p.date), 'PPP')}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(p.amount)}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant={p.status === 'paid' ? 'default' : 'secondary'} className="capitalize">
+                                                        {p.status === 'paid' ? <BadgeCheck className="mr-1 h-3 w-3"/> : <BadgeX className="mr-1 h-3 w-3"/> }
+                                                        {p.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
             </div>
         </div>
     );
 }
-

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, Info } from "lucide-react";
+import { ChevronLeft, Info, PlusCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -19,7 +19,23 @@ import {
 
 export default function NewPropertyPage() {
 
-    const [paymentType, setPaymentType] = useState<'mortgage' | 'cash'>('mortgage');
+    const [paymentType, setPaymentType] = useState<'mortgage' | 'cash' | 'installment'>('mortgage');
+    const [installments, setInstallments] = useState([{ date: '', amount: ''}]);
+
+    const handleAddInstallment = () => {
+        setInstallments([...installments, { date: '', amount: '' }]);
+    };
+
+    const handleRemoveInstallment = (index: number) => {
+        const newInstallments = installments.filter((_, i) => i !== index);
+        setInstallments(newInstallments);
+    };
+
+    const handleInstallmentChange = (index: number, field: 'date' | 'amount', value: string) => {
+        const newInstallments = [...installments];
+        newInstallments[index][field] = value;
+        setInstallments(newInstallments);
+    };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
@@ -77,11 +93,11 @@ export default function NewPropertyPage() {
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="text-sm">
-                                        Select how this property was financed. If you used a bank loan, choose 'Mortgage'. If you paid in full with your own funds, choose 'Cash'.
+                                        Select how this property was financed.
                                     </PopoverContent>
                                 </Popover>
                             </div>
-                             <RadioGroup value={paymentType} onValueChange={(value) => setPaymentType(value as 'mortgage' | 'cash')} className="flex gap-4">
+                             <RadioGroup value={paymentType} onValueChange={(value) => setPaymentType(value as 'mortgage' | 'cash' | 'installment')} className="flex flex-wrap gap-4">
                                 <Label htmlFor="r-mortgage" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
                                   <RadioGroupItem value="mortgage" id="r-mortgage" />
                                   Mortgage / Loan
@@ -89,6 +105,10 @@ export default function NewPropertyPage() {
                                 <Label htmlFor="r-cash" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
                                   <RadioGroupItem value="cash" id="r-cash" />
                                   Paid in Cash
+                                </Label>
+                                <Label htmlFor="r-installment" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
+                                  <RadioGroupItem value="installment" id="r-installment" />
+                                  Installment Plan
                                 </Label>
                             </RadioGroup>
                         </div>
@@ -120,6 +140,37 @@ export default function NewPropertyPage() {
                                      <p className="text-xs text-muted-foreground">
                                         If paid by multiple people, note down each person and their contribution.
                                      </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {paymentType === 'installment' && (
+                             <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="font-semibold">Installment Plan</h4>
+                                    <Button type="button" variant="outline" size="sm" onClick={handleAddInstallment}><PlusCircle className="mr-2 h-4 w-4"/> Add Row</Button>
+                                </div>
+                                <div className="space-y-2">
+                                    {installments.map((inst, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <Input 
+                                                type="date" 
+                                                value={inst.date}
+                                                onChange={(e) => handleInstallmentChange(index, 'date', e.target.value)}
+                                                className="flex-1"
+                                            />
+                                            <Input 
+                                                type="number" 
+                                                placeholder="Amount" 
+                                                value={inst.amount}
+                                                onChange={(e) => handleInstallmentChange(index, 'amount', e.target.value)}
+                                                className="w-32"
+                                            />
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveInstallment(index)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}

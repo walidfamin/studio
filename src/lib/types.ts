@@ -21,16 +21,23 @@ export type Contributor = {
   amount: number;
 };
 
+export type Installment = {
+  date: string;
+  amount: number;
+  status: 'paid' | 'unpaid';
+};
+
 export type Property = {
   id: string;
   name: string;
   location: string;
   totalValue: number;
   downPayment: number;
-  paymentType: 'mortgage' | 'cash';
+  paymentType: 'mortgage' | 'cash' | 'installment';
   cashContributors?: Contributor[];
   loanAmount: number;
   installmentAmount: number;
   nextInstallmentDate: string;
   paymentsMade: number;
+  paymentPlan?: Installment[];
 };

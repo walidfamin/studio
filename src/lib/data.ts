@@ -47,5 +47,10 @@ export const properties: Property[] = [
         installmentAmount: 5500,
         nextInstallmentDate: '2024-08-01T00:00:00.000Z',
         paymentsMade: 55000,
+        paymentPlan: [
+            { date: '2024-08-01', amount: 5500, status: 'unpaid' },
+            { date: '2024-09-01', amount: 5500, status: 'unpaid' },
+            { date: '2024-10-01', amount: 5500, status: 'unpaid' },
+        ]
     }
 ];
