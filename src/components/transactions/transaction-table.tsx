@@ -34,8 +34,10 @@ import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Download } from 'lucide-react';
 import { AddTransactionSheet } from '../add-transaction-sheet';
+import { Checkbox } from '../ui/checkbox';
+import * as XLSX from 'xlsx';
 
 export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -44,6 +46,28 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
   const [rowSelection, setRowSelection] = React.useState({});
 
   const columns: ColumnDef<Transaction>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
         accessorKey: 'date',
         header: 'Date',
@@ -96,6 +120,27 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
       rowSelection,
     },
   });
+
+  const handleExport = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    const dataToExport = selectedRows.map(row => row.original);
+    
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Selected Transactions");
+    XLSX.writeFile(workbook, "selected_transactions.csv");
+  };
+  
+  const selectedTotal = React.useMemo(() => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    return selectedRows.reduce((total, row) => {
+        const amount = parseFloat(row.getValue('amount'));
+        const type = row.original.type;
+        const value = type === 'expense' ? -amount : amount;
+        return total + value;
+    }, 0);
+  }, [rowSelection, table]);
+
 
   return (
     <div className="w-full">
@@ -190,8 +235,20 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} of{' '}
-          {table.getCoreRowModel().rows.length} row(s) displayed.
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <div className="flex items-center gap-4">
+                <span>
+                    {table.getFilteredSelectedRowModel().rows.length} of{' '}
+                    {table.getCoreRowModel().rows.length} row(s) selected.
+                </span>
+                <span className="font-bold">Total: {formatCurrency(selectedTotal)}</span>
+                <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4"/>
+                    Export Selected
+                </Button>
+            </div>
+            )
+          }
         </div>
         <div className="space-x-2">
           <Button
