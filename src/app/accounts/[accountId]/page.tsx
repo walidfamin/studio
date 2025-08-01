@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -147,7 +148,7 @@ export default function AccountDetailPage() {
                                 <p className="text-sm text-muted-foreground">{new Date(t.date).toLocaleDateString()}</p>
                             </div>
                             <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                                {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
+                                {(t.type === 'expense' ? -t.amount : t.amount).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
                             </p>
                         </li>
                     ))}
