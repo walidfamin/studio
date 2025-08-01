@@ -6,3 +6,10 @@ export type Transaction = {
   type: 'income' | 'expense';
   category: string;
 };
+
+export type Account = {
+  id: string;
+  name: string;
+  balance: number;
+  type: 'bank' | 'credit' | 'investment';
+}

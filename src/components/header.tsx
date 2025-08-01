@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Settings, User, Wallet } from 'lucide-react';
+import { LogOut, Settings, User, Wallet, Upload, Download } from 'lucide-react';
 import { AddTransactionSheet } from './add-transaction-sheet';
 
 export default function Header() {
@@ -21,6 +21,14 @@ export default function Header() {
           <span className="text-xl font-bold font-headline">FinView</span>
         </Link>
         <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2">
+             <Button variant="outline" size="sm" asChild>
+                <Link href="/transactions-template.csv" download>
+                  <Download />
+                  Export
+                </Link>
+              </Button>
+          </div>
           <AddTransactionSheet />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

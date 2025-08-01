@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/transactions-template.csv',
+        destination: '/api/download-template',
+      },
+    ]
+  },
 };
 
 export default nextConfig;

@@ -16,6 +16,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { transactions } from '@/lib/data';
+import { format } from 'date-fns';
+
 
 export function RecentTransactions() {
   return (
@@ -47,7 +49,7 @@ export function RecentTransactions() {
                     </div>
                     <div>
                         <div className="font-medium">{transaction.description}</div>
-                        <div className="text-sm text-muted-foreground md:hidden">{transaction.date}</div>
+                        <div className="text-sm text-muted-foreground md:hidden">{format(new Date(transaction.date), 'PP')}</div>
                     </div>
                   </div>
                 </TableCell>
@@ -57,7 +59,7 @@ export function RecentTransactions() {
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">{transaction.category}</TableCell>
-                <TableCell className="hidden md:table-cell">{transaction.date}</TableCell>
+                <TableCell className="hidden md:table-cell">{format(new Date(transaction.date), 'PP')}</TableCell>
                 <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-foreground'}`}>
                     {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
                 </TableCell>
