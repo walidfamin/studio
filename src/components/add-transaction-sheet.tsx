@@ -32,6 +32,7 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { accounts } from '@/lib/data';
 
 export function AddTransactionSheet() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -62,6 +63,21 @@ export function AddTransactionSheet() {
             </SheetDescription>
           </SheetHeader>
           <div className="grid gap-4 py-4 flex-1 overflow-y-auto pr-4">
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="account" className="text-right">
+                Account
+              </Label>
+              <Select>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select an account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map(account => (
+                     <SelectItem key={account.id} value={account.id}>{account.name} - {account.bank}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
                 Description

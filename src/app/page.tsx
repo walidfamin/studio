@@ -1,14 +1,8 @@
 
 import { Button } from '@/components/ui/button';
-import { Download, TrendingUp, MoreHorizontal, ArrowDown, ArrowUp, Search, Bell, Calendar as CalendarIcon } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Search, Bell, Calendar as CalendarIcon } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 
 import { TransactionsOverTime } from '@/components/dashboard/transactions-over-time';
 import { RecentTransactions } from '@/components/dashboard/recent-transactions';

@@ -3,24 +3,22 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { accounts as allAccounts, transactions } from "@/lib/data";
-import { Account, Transaction } from "@/lib/types";
-import { ArrowUp, ChevronDown, RefreshCw, Plus } from "lucide-react";
+import { Account } from "@/lib/types";
+import { RefreshCw, Plus } from "lucide-react";
 import Image from "next/image";
 import {
   Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Legend,
   Line,
   ComposedChart,
   LineChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
 } from "recharts"
 import { useMemo } from "react";
 import Link from 'next/link';
@@ -47,23 +45,27 @@ allAccounts.forEach(account => {
     }
 });
 
+function getAccountBalance(accountId: string) {
+    return transactions
+        .filter(t => t.accountId === accountId)
+        .reduce((acc, t) => {
+            if (t.type === 'income') return acc + t.amount;
+            if (t.type === 'expense') return acc - t.amount;
+            return acc;
+        }, 0);
+}
+
 function AccountRow({ account }: { account: Account }) {
-    const accountTransactions = transactions.filter(t => t.accountId === account.id);
-    const balance = accountTransactions.reduce((acc, t) => {
-        if (t.type === 'income') return acc + t.amount;
-        if (t.type === 'expense') return acc - t.amount;
-        return acc;
-    }, 0);
+    const balance = getAccountBalance(account.id);
 
     const chartData = useMemo(() => {
-        // Create a mini-chart for the last few transactions
-        const recentTransactions = accountTransactions.slice(0, 15).reverse();
+        const accountTransactions = transactions.filter(t => t.accountId === account.id).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         let runningBalance = 0;
-        return recentTransactions.map(t => {
+        return accountTransactions.map(t => {
             runningBalance += t.type === 'income' ? t.amount : -t.amount;
             return { v: runningBalance };
         });
-    }, [accountTransactions]);
+    }, [account.id]);
 
     return (
          <Link href={`/accounts/${account.id}`} className="block">
@@ -86,23 +88,14 @@ function AccountRow({ account }: { account: Account }) {
                 </div>
                 <div className="text-right">
                     <p className="font-semibold">{formatCurrency(balance)}</p>
-                    {/* <p className="text-sm text-muted-foreground">17 hours ago</p> */}
                 </div>
             </div>
         </Link>
     );
 }
 
-function AccountGroup({ title, accounts, change, changePercent }: { title: string, accounts: Account[], change: number, changePercent: number }) {
-    const total = accounts.reduce((sum, acc) => {
-         const accountTransactions = transactions.filter(t => t.accountId === acc.id);
-         const balance = accountTransactions.reduce((acc, t) => {
-            if (t.type === 'income') return acc + t.amount;
-            if (t.type === 'expense') return acc - t.amount;
-            return acc;
-        }, 0);
-        return sum + balance;
-    }, 0);
+function AccountGroup({ title, accounts }: { title: string, accounts: Account[] }) {
+    const total = accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
 
     return (
         <Card className="mb-6">
@@ -122,64 +115,38 @@ function AccountGroup({ title, accounts, change, changePercent }: { title: strin
 export default function AccountsPage() {
     
     const { netWorth, totalAssets, totalLiabilities, netWorthChartData } = useMemo(() => {
-        let netWorth = 0;
-        let totalAssets = 0;
-        let totalLiabilities = 0;
-
-        const monthlyData: Record<string, { income: number; expense: number; netWorth: number; cash: number; investments: number; other: number; date: Date }> = {};
-
+        const balances = allAccounts.map(account => getAccountBalance(account.id));
+        const netWorth = balances.reduce((sum, balance) => sum + balance, 0);
+        const totalAssets = balances.filter(b => b > 0).reduce((sum, b) => sum + b, 0);
+        const totalLiabilities = balances.filter(b => b < 0).reduce((sum, b) => sum + b, 0);
+        
+        const monthlyData: Record<string, { cash: number; investments: number; other: number; date: Date }> = {};
+        
         transactions.forEach(t => {
             const date = new Date(t.date);
-            const month = date.toLocaleString('default', { month: 'short', year: 'numeric' });
-            
-            if (!monthlyData[month]) {
-                 monthlyData[month] = { date, income: 0, expense: 0, netWorth: 0, cash: 0, investments: 0, other: 0 };
+            const monthKey = date.toISOString().slice(0, 7);
+            const account = allAccounts.find(a => a.id === t.accountId);
+            if (!account) return;
+
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = { date, cash: 0, investments: 0, other: 0 };
             }
 
-            if (t.type === 'income') {
-                monthlyData[month].income += t.amount;
-            } else {
-                monthlyData[month].expense += t.amount;
+            const amount = t.type === 'income' ? t.amount : -t.amount;
+
+            if (account.type === 'Current Account' || account.type === 'Saving Account' || account.type === 'E Saving Account') {
+                monthlyData[monthKey].cash += amount;
+            } else if (account.type !== 'Credit Card') {
+                monthlyData[monthKey].other += amount;
             }
-        });
-
-        allAccounts.forEach(account => {
-            const accountTransactions = transactions.filter(t => t.accountId === account.id);
-            const balance = accountTransactions.reduce((acc, t) => {
-                if (t.type === 'income') return acc + t.amount;
-                if (t.type === 'expense') return acc - t.amount;
-                return acc;
-            }, 0);
-
-            if (balance > 0) {
-                totalAssets += balance;
-            } else {
-                totalLiabilities += balance;
-            }
-            netWorth += balance;
-
-            accountTransactions.forEach(t => {
-                const date = new Date(t.date);
-                const month = date.toLocaleString('default', { month: 'short', year: 'numeric' });
-                const accountType = account.type;
-
-                const amount = t.type === 'income' ? t.amount : -t.amount;
-                
-                if (accountType === 'Current Account' || accountType === 'Saving Account' || accountType === 'E Saving Account') {
-                    if (monthlyData[month]) monthlyData[month].cash += amount;
-                } else if (accountType === 'Credit Card') {
-                    // Already handled in liabilities
-                } else {
-                    if (monthlyData[month]) monthlyData[month].other += amount;
-                }
-            })
         });
 
         const sortedMonths = Object.values(monthlyData).sort((a,b) => a.date.getTime() - b.date.getTime());
         
         let runningNetWorth = 0;
         const netWorthChartData = sortedMonths.map(data => {
-            runningNetWorth += data.income - data.expense;
+            const monthlyNetChange = data.cash + data.investments + data.other;
+            runningNetWorth += monthlyNetChange;
             return {
                 name: data.date.toLocaleString('default', { month: 'short' }),
                 netWorth: runningNetWorth,
@@ -189,10 +156,11 @@ export default function AccountsPage() {
             };
         });
 
-
         return { netWorth, totalAssets, totalLiabilities, netWorthChartData };
-
     }, []);
+
+    const totalCash = accountGroups.cash.accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
+    const totalCredit = accountGroups.credit.accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -235,13 +203,13 @@ export default function AccountsPage() {
                 </Card>
 
                 {accountGroups.cash.accounts.length > 0 && 
-                    <AccountGroup title="Cash" accounts={accountGroups.cash.accounts} change={0} changePercent={0} />
+                    <AccountGroup title="Cash" accounts={accountGroups.cash.accounts} />
                 }
                 {accountGroups.credit.accounts.length > 0 &&
-                    <AccountGroup title="Credit Cards" accounts={accountGroups.credit.accounts} change={0} changePercent={0} />
+                    <AccountGroup title="Credit Cards" accounts={accountGroups.credit.accounts} />
                 }
                 {accountGroups.investment.accounts.length > 0 &&
-                    <AccountGroup title="Investments" accounts={accountGroups.investment.accounts} change={0} changePercent={0} />
+                    <AccountGroup title="Investments" accounts={accountGroups.investment.accounts} />
                 }
 
             </div>
@@ -257,13 +225,7 @@ export default function AccountsPage() {
                             <ul className="space-y-2 text-sm">
                                 <li className="flex justify-between">
                                     <span>Cash</span>
-                                    <span>
-                                        {formatCurrency(accountGroups.cash.accounts.reduce((sum, acc) => {
-                                             const accountTransactions = transactions.filter(t => t.accountId === acc.id);
-                                             const balance = accountTransactions.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
-                                             return sum + balance;
-                                        }, 0))}
-                                    </span>
+                                    <span>{formatCurrency(totalCash)}</span>
                                 </li>
                                 <li className="flex justify-between">
                                     <span>Investments</span>
@@ -282,13 +244,7 @@ export default function AccountsPage() {
                              <ul className="space-y-2 text-sm">
                                 <li className="flex justify-between">
                                      <span>Credit Cards</span>
-                                      <span>
-                                        {formatCurrency(accountGroups.credit.accounts.reduce((sum, acc) => {
-                                             const accountTransactions = transactions.filter(t => t.accountId === acc.id);
-                                             const balance = accountTransactions.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
-                                             return sum + balance;
-                                        }, 0))}
-                                    </span>
+                                      <span>{formatCurrency(totalCredit)}</span>
                                 </li>
                             </ul>
                             <Separator className="my-4" />

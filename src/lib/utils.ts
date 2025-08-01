@@ -6,6 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number): string {
+  const isNegative = amount < 0;
   const absAmount = Math.abs(amount);
 
   const formatted = new Intl.NumberFormat('en-AE', {
@@ -15,5 +16,5 @@ export function formatCurrency(amount: number): string {
     maximumFractionDigits: 2,
   }).format(absAmount);
 
-  return amount < 0 ? `- ${formatted}` : formatted;
+  return isNegative ? `- ${formatted.replace('AED', '').trim()}` : formatted;
 }
