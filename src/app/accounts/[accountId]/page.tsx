@@ -10,6 +10,7 @@ import { useRef, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useParams } from "next/navigation";
 import { Transaction } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 export default function AccountDetailPage() {
     const params = useParams();
@@ -120,7 +121,7 @@ export default function AccountDetailPage() {
                 <CardTitle>Current Balance</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-4xl font-bold">{account.balance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</p>
+                <p className="text-4xl font-bold">{formatCurrency(account.balance)}</p>
             </CardContent>
         </Card>
          <Card className="col-span-2">
@@ -148,7 +149,7 @@ export default function AccountDetailPage() {
                                 <p className="text-sm text-muted-foreground">{new Date(t.date).toLocaleDateString()}</p>
                             </div>
                             <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                                {(t.type === 'expense' ? -t.amount : t.amount).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
+                                {formatCurrency(t.type === 'expense' ? -t.amount : t.amount)}
                             </p>
                         </li>
                     ))}

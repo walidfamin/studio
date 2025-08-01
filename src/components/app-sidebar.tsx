@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collap
 import { Button } from './ui/button';
 import { Account } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { formatCurrency } from '@/lib/utils';
 
 const accountGroups = accounts.reduce((acc, account) => {
   if (!acc[account.bank]) {
@@ -21,16 +22,6 @@ const accountGroups = accounts.reduce((acc, account) => {
 
 export default function AppSidebar() {
   const pathname = usePathname();
-
-  const formatCurrency = (amount: number) => {
-    const isNegative = amount < 0;
-    const absAmount = Math.abs(amount);
-    const formatted = new Intl.NumberFormat('en-AE', {
-        style: 'currency',
-        currency: 'AED'
-    }).format(absAmount);
-    return isNegative ? `- ${formatted}`: formatted;
-  };
 
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="group-data-[variant=sidebar]:border-r">
