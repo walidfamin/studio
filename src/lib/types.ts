@@ -15,3 +15,14 @@ export type Account = {
   type: 'Credit Card' | 'Saving Account' | 'Current Account' | 'E Saving Account' | 'New Account';
   bank: string;
 };
+
+export type Property = {
+  id: string;
+  name: string;
+  totalValue: number;
+  downPayment: number;
+  loanAmount: number;
+  installmentAmount: number;
+  nextInstallmentDate: string;
+  paymentsMade: number;
+};

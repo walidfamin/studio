@@ -1,4 +1,4 @@
-import type { Transaction, Account } from './types';
+import type { Transaction, Account, Property } from './types';
 
 export const transactions: Transaction[] = [];
 
@@ -33,4 +33,17 @@ export const accounts: Account[] = [
 
     // RAK BANK Accounts
     { id: 'rak_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'RAK BANK' },
+];
+
+export const properties: Property[] = [
+    {
+        id: 'prop1',
+        name: 'Downtown Apartment',
+        totalValue: 1200000,
+        downPayment: 240000,
+        loanAmount: 960000,
+        installmentAmount: 5500,
+        nextInstallmentDate: '2024-08-01T00:00:00.000Z',
+        paymentsMade: 55000,
+    }
 ];
