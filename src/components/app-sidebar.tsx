@@ -22,6 +22,10 @@ const accountGroups = accounts.reduce((acc, account) => {
 export default function AppSidebar() {
   const pathname = usePathname();
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(amount);
+  };
+
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="group-data-[variant=sidebar]:border-r">
        <SidebarHeader className="h-16 flex items-center justify-between p-4">
@@ -29,7 +33,7 @@ export default function AppSidebar() {
             <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
                 <TreePalm size={20} />
             </div>
-            <h1 className="text-xl font-bold font-headline text-sidebar-foreground">Our Budget</h1>
+            <h1 className="text-xl font-bold font-headline text-sidebar-foreground">FinView</h1>
         </div>
         <SidebarTrigger className="text-sidebar-foreground" />
       </SidebarHeader>
@@ -90,7 +94,7 @@ export default function AppSidebar() {
                     <div className={`flex justify-between items-center text-sidebar-foreground/70 rounded-md px-2 py-1 ${pathname === `/accounts/${account.id}` ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}`}>
                         <span>{account.name}</span>
                         <span className={`font-mono ${account.balance < 0 ? 'text-red-400' : ''}`}>
-                            {account.balance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
+                            {formatCurrency(account.balance)}
                         </span>
                     </div>
                   </Link>
