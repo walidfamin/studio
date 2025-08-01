@@ -120,26 +120,19 @@ export default function AccountDetailPage() {
         if (!file) return;
 
         const reader = new FileReader();
+        const processFile = (data: any) => {
+            const workbook = XLSX.read(data, { type: file.name.endsWith('.csv') ? 'string' : 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+            processData(json as any[][]);
+        };
 
         if (file.name.endsWith('.csv')) {
-             reader.onload = (e) => {
-                const text = e.target?.result as string;
-                const workbook = XLSX.read(text, { type: 'string' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-                processData(json as any[][]);
-            };
+             reader.onload = (e) => processFile(e.target?.result);
             reader.readAsText(file);
         } else if (file.name.endsWith('.xlsx')) {
-            reader.onload = (e) => {
-                const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-                processData(json as any[][]);
-            };
+            reader.onload = (e) => processFile(e.target?.result);
             reader.readAsArrayBuffer(file);
         } else {
              toast({
