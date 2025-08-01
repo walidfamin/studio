@@ -12,6 +12,6 @@ export type Account = {
   id: string;
   name: string;
   balance: number;
-  type: 'Credit Card' | 'Saving Account' | 'Current Account' | 'E Saving Account';
+  type: 'Credit Card' | 'Saving Account' | 'Current Account' | 'E Saving Account' | 'New Account';
   bank: string;
 };

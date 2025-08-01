@@ -72,9 +72,11 @@ export default function AppSidebar() {
                 </CollapsibleTrigger>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                         <Button variant="ghost" size="icon" className="w-6 h-6 ml-auto shrink-0">
-                            <PlusCircle className="w-4 h-4 text-sidebar-foreground/60" />
-                        </Button>
+                         <Link href={`/accounts/new?bank=${encodeURIComponent(bank)}`}>
+                            <Button variant="ghost" size="icon" className="w-6 h-6 ml-auto shrink-0">
+                                <PlusCircle className="w-4 h-4 text-sidebar-foreground/60" />
+                            </Button>
+                        </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right">
                         <p>Add account to {bank}</p>
