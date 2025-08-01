@@ -35,8 +35,12 @@ export function SpendingBreakdown() {
 
   return (
     <Card className="h-full flex flex-col">
+       <CardHeader>
+        <CardTitle className="font-headline">Spending Breakdown</CardTitle>
+        <CardDescription>A look at your spending by category.</CardDescription>
+      </CardHeader>
       <CardContent className="flex-1 flex items-center justify-center pb-0 pt-6">
-          <ChartContainer config={chartConfig} className="min-h-[300px] w-full max-w-[300px]">
+          <ChartContainer config={chartConfig} className="min-h-[200px] w-full max-w-[200px]">
             <PieChart accessibilityLayer>
               <Tooltip 
                 cursor={false}
@@ -58,8 +62,8 @@ export function SpendingBreakdown() {
                 data={categorySpending}
                 dataKey="value"
                 nameKey="category"
-                innerRadius={80}
-                outerRadius={120}
+                innerRadius={60}
+                outerRadius={80}
                 strokeWidth={5}
               >
                  {categorySpending.map((entry, index) => (
@@ -80,4 +84,3 @@ export function SpendingBreakdown() {
     </Card>
   );
 }
-

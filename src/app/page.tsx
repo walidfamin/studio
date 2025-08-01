@@ -18,6 +18,7 @@ import { MonthlyProfits } from '@/components/dashboard/monthly-profits';
 import { MostPayments } from '@/components/dashboard/most-payments';
 import { ShopifyPayments } from '@/components/dashboard/shopify-payments';
 import { Input } from '@/components/ui/input';
+import { SpendingBreakdown } from '@/components/dashboard/spending-breakdown';
 
 
 export default function DashboardPage() {
@@ -61,7 +62,7 @@ export default function DashboardPage() {
                 <RecentPayments />
             </div>
             <div className="lg:col-span-1">
-                <MostPayments />
+                <SpendingBreakdown />
             </div>
             <div className="lg:col-span-1">
                 <MonthlyProfits />

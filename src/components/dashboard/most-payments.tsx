@@ -20,7 +20,6 @@ const paymentData = [
     { category: 'Clothes', amount: 214, progress: 42 },
     { category: 'Starbucks', amount: 202, progress: 40 },
     { category: 'Transportation', amount: 152, progress: 30 },
-    { category: 'Finland', amount: 96, progress: 18 },
 ]
 
 export function MostPayments() {
