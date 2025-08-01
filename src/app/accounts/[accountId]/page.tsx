@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,9 @@ export default function AccountDetailPage() {
 
     useEffect(() => {
         if (accountId) {
-            setTransactions(initialTransactions.filter(t => t.accountId === accountId));
+            // Filter initial transactions for the current account
+            const accountTransactions = initialTransactions.filter(t => t.accountId === accountId);
+            setTransactions(accountTransactions);
         }
     }, [accountId]);
 
@@ -45,13 +46,14 @@ export default function AccountDetailPage() {
                 try {
                     const lines = text.split('\n').slice(1); // Skip header row
                     const newTransactions: Transaction[] = lines.map((line, index) => {
+                        if (!line.trim()) return null; // Skip empty lines
                         const [date, description, amountStr, type, category] = line.split(',');
                         if (!date || !description || !amountStr || !type || !category) {
-                            throw new Error(`Invalid data on line ${index + 2}`);
+                            throw new Error(`Invalid data on line ${index + 2}: Each row must have 5 values.`);
                         }
                         const amount = parseFloat(amountStr);
                         if (isNaN(amount)) {
-                             throw new Error(`Invalid amount on line ${index + 2}`);
+                             throw new Error(`Invalid amount on line ${index + 2}: '${amountStr}' is not a valid number.`);
                         }
                         return {
                             id: `imported_${Date.now()}_${index}`,
@@ -62,13 +64,13 @@ export default function AccountDetailPage() {
                             category: category.trim(),
                             accountId: accountId,
                         };
-                    }).filter(t => t.description); // Filter out empty lines
+                    }).filter((t): t is Transaction => t !== null); // Filter out empty lines
 
                     if (newTransactions.length === 0) {
                         toast({
                             variant: "destructive",
                             title: "Import Error",
-                            description: "The selected file is empty or in an invalid format.",
+                            description: "The selected file is empty or does not contain valid data.",
                         });
                         return;
                     }
@@ -84,8 +86,20 @@ export default function AccountDetailPage() {
                         title: "Import Failed",
                         description: error.message || "An unexpected error occurred during import.",
                     });
+                } finally {
+                    // Reset file input to allow re-uploading the same file
+                    if(fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                    }
                 }
             };
+            reader.onerror = () => {
+                toast({
+                    variant: "destructive",
+                    title: "File Read Error",
+                    description: "Could not read the selected file.",
+                });
+            }
             reader.readAsText(file);
         }
     };
@@ -142,23 +156,25 @@ export default function AccountDetailPage() {
             </CardHeader>
             <CardContent>
                 <ul>
-                    {transactions.map(t => (
-                        <li key={t.id} className="flex justify-between items-center py-2 border-b">
-                            <div>
-                                <p className="font-medium">{t.description}</p>
-                                <p className="text-sm text-muted-foreground">{new Date(t.date).toLocaleDateString()}</p>
-                            </div>
-                            <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                                {formatCurrency(t.type === 'expense' ? -t.amount : t.amount)}
-                            </p>
-                        </li>
-                    ))}
+                    {transactions.length > 0 ? (
+                        transactions.map(t => (
+                            <li key={t.id} className="flex justify-between items-center py-2 border-b">
+                                <div>
+                                    <p className="font-medium">{t.description}</p>
+                                    <p className="text-sm text-muted-foreground">{new Date(t.date).toLocaleDateString()}</p>
+                                </div>
+                                <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                                    {formatCurrency(t.type === 'expense' ? -t.amount : t.amount)}
+                                </p>
+                            </li>
+                        ))
+                    ) : (
+                         <li className="text-center text-muted-foreground py-4">No transactions found.</li>
+                    )}
                 </ul>
             </CardContent>
         </Card>
-
       </div>
-
     </div>
   )
 }
