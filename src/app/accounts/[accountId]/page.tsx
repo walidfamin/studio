@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -72,12 +73,22 @@ export default function AccountDetailPage() {
         }
     }, [accountId]);
     
-    const accountBalance = useMemo(() => {
-        return transactions.reduce((acc, t) => {
-            if (t.type === 'income') return acc + t.amount;
-            if (t.type === 'expense') return acc - t.amount;
-            return acc;
-        }, 0);
+    const { accountBalance, totalUsage, totalPayments } = useMemo(() => {
+        let balance = 0;
+        let usage = 0;
+        let payments = 0;
+
+        transactions.forEach(t => {
+            if (t.type === 'income') {
+                balance += t.amount;
+                payments += t.amount;
+            } else if (t.type === 'expense') {
+                balance -= t.amount;
+                usage += t.amount;
+            }
+        });
+
+        return { accountBalance: balance, totalUsage: usage, totalPayments: payments };
     }, [transactions]);
 
 
@@ -307,8 +318,8 @@ export default function AccountDetailPage() {
         </div>
       </header>
       
-      <div className="grid grid-cols-3 gap-6">
-        <Card className="col-span-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="lg:col-span-2">
             <CardHeader>
                 <CardTitle>Current Balance</CardTitle>
             </CardHeader>
@@ -316,7 +327,27 @@ export default function AccountDetailPage() {
                 <p className="text-4xl font-bold">{formatCurrency(accountBalance)}</p>
             </CardContent>
         </Card>
-         <Card className="col-span-2">
+        {accountDetails.type === 'Credit Card' && (
+            <>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Usage</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold">{formatCurrency(totalUsage)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Payments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold">{formatCurrency(totalPayments)}</p>
+                    </CardContent>
+                </Card>
+            </>
+        )}
+         <Card className="col-span-full">
             <CardHeader>
                 <CardTitle>Payment History</CardTitle>
                 <CardDescription>Income vs Expenses for categorized transactions.</CardDescription>
@@ -342,7 +373,7 @@ export default function AccountDetailPage() {
             </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        <Card className="col-span-full">
             <CardHeader>
                 <CardTitle>Recent Transactions</CardTitle>
             </CardHeader>
