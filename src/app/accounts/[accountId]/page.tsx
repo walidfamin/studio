@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
 
 
@@ -59,6 +60,7 @@ export default function AccountDetailPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('');
+    const [customCategory, setCustomCategory] = useState<string>('');
 
     useEffect(() => {
         if (accountId) {
@@ -195,15 +197,27 @@ export default function AccountDetailPage() {
     };
 
     const handleSaveCategory = () => {
-        if (!editingTransaction || !selectedCategory) return;
+        if (!editingTransaction) return;
         
+        const finalCategory = selectedCategory === 'Other' ? customCategory : selectedCategory;
+
+        if (!finalCategory) {
+             toast({
+                variant: "destructive",
+                title: "Category not selected",
+                description: "Please select or enter a category.",
+            });
+            return;
+        }
+
         setTransactions(prev => 
             prev.map(t => 
-                t.id === editingTransaction.id ? { ...t, category: selectedCategory } : t
+                t.id === editingTransaction.id ? { ...t, category: finalCategory } : t
             )
         );
         setEditingTransaction(null);
         setSelectedCategory('');
+        setCustomCategory('');
 
         toast({
             title: "Transaction Updated",
@@ -214,7 +228,14 @@ export default function AccountDetailPage() {
     const handleEditClick = (transaction: Transaction) => {
         setEditingTransaction(transaction);
         setSelectedCategory(transaction.category);
+        setCustomCategory('');
     };
+
+    const handleCloseDialog = () => {
+        setEditingTransaction(null);
+        setSelectedCategory('');
+        setCustomCategory('');
+    }
 
     const chartData = transactions
         .filter(t => t.category !== 'Uncategorized')
@@ -325,7 +346,7 @@ export default function AccountDetailPage() {
         </Card>
       </div>
 
-       <Dialog open={!!editingTransaction} onOpenChange={(isOpen) => !isOpen && setEditingTransaction(null)}>
+       <Dialog open={!!editingTransaction} onOpenChange={(isOpen) => !isOpen && handleCloseDialog()}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Categorize Transaction</DialogTitle>
@@ -333,26 +354,40 @@ export default function AccountDetailPage() {
                         Select a category for: "{editingTransaction?.description}"
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
-                    <Label htmlFor="category">Category</Label>
-                    <Select onValueChange={setSelectedCategory} defaultValue={selectedCategory}>
-                        <SelectTrigger id="category">
-                            <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Lifestyle">Lifestyle</SelectItem>
-                            <SelectItem value="Investment">Investment</SelectItem>
-                            <SelectItem value="Spends">Spends</SelectItem>
-                            <SelectItem value="Food">Food</SelectItem>
-                            <SelectItem value="Transport">Transportation</SelectItem>
-                            <SelectItem value="Groceries">Groceries</SelectItem>
-                            <SelectItem value="Salary">Salary</SelectItem>
-                            <SelectItem value="Rent/Mortgage">Rent/Mortgage</SelectItem>
-                        </SelectContent>
-                    </Select>
+                <div className="py-4 space-y-4">
+                    <div>
+                        <Label htmlFor="category">Category</Label>
+                        <Select onValueChange={setSelectedCategory} defaultValue={selectedCategory}>
+                            <SelectTrigger id="category">
+                                <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Lifestyle">Lifestyle</SelectItem>
+                                <SelectItem value="Investment">Investment</SelectItem>
+                                <SelectItem value="Spends">Spends</SelectItem>
+                                <SelectItem value="Food">Food</SelectItem>
+                                <SelectItem value="Transport">Transportation</SelectItem>
+                                <SelectItem value="Groceries">Groceries</SelectItem>
+                                <SelectItem value="Salary">Salary</SelectItem>
+                                <SelectItem value="Rent/Mortgage">Rent/Mortgage</SelectItem>
+                                <SelectItem value="Other">Other (Custom)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {selectedCategory === 'Other' && (
+                        <div>
+                            <Label htmlFor="custom-category">Custom Category</Label>
+                            <Input 
+                                id="custom-category" 
+                                placeholder="Enter your custom tag"
+                                value={customCategory}
+                                onChange={(e) => setCustomCategory(e.target.value)}
+                            />
+                        </div>
+                    )}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setEditingTransaction(null)}>Cancel</Button>
+                    <Button variant="outline" onClick={handleCloseDialog}>Cancel</Button>
                     <Button onClick={handleSaveCategory}>Save</Button>
                 </DialogFooter>
             </DialogContent>
