@@ -3,8 +3,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { accounts, transactions as initialTransactions } from "@/lib/data";
-import { Download, Upload, Edit } from "lucide-react";
+import { accounts, transactions as initialTransactions, categorySpending } from "@/lib/data";
+import { Download, Upload, Edit, Home, ShoppingCart, Zap, Car, Phone, Tv } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,8 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { format, parseISO } from 'date-fns';
+import { Separator } from "@/components/ui/separator";
 
 
 function parseFlexibleDate(dateStr: string | number): Date {
@@ -278,17 +279,34 @@ export default function AccountDetailPage() {
             .filter(t => t.type === 'expense' && t.category !== 'Uncategorized')
             .reduce((acc, t) => {
                 if (!acc[t.category]) {
-                    acc[t.category] = 0;
+                    acc[t.category] = { value: 0, fill: `hsl(var(--chart-${(Object.keys(acc).length % 5) + 1}))` };
                 }
-                acc[t.category] += t.amount;
+                acc[t.category].value += t.amount;
                 return acc;
-            }, {} as Record<string, number>);
+            }, {} as Record<string, { value: number, fill: string }>);
 
         return Object.entries(spending)
-            .map(([category, total]) => ({ category, total }))
-            .sort((a, b) => b.total - a.total);
+            .map(([category, data]) => ({ name: category, ...data }))
+            .sort((a, b) => b.value - a.value);
     }, [transactions]);
 
+    const totalSpending = useMemo(() => {
+        return spendingByCategoryChartData.reduce((acc, item) => acc + item.value, 0);
+    }, [spendingByCategoryChartData]);
+
+    const categoryIcons: { [key: string]: React.ReactNode } = {
+        'Rent/Mortgage': <Home className="w-4 h-4" />,
+        'Groceries': <ShoppingCart className="w-4 h-4" />,
+        'Electric': <Zap className="w-4 h-4" />,
+        'Transportation': <Car className="w-4 h-4" />,
+        'Phone': <Phone className="w-4 h-4" />,
+        'TV': <Tv className="w-4 h-4" />,
+        'Food': <ShoppingCart className="w-4 h-4" />,
+        'Lifestyle': <Home className="w-4 h-4" />,
+        'Spends': <Zap className="w-4 h-4" />,
+        'Investment': <Zap className="w-4 h-4" />,
+        'Salary': <Zap className="w-4 h-4" />,
+    };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -343,35 +361,77 @@ export default function AccountDetailPage() {
                 </Card>
             </>
         )}
-         <Card className="col-span-full">
-            <CardHeader>
-                <CardTitle>Spending by Category</CardTitle>
-                <CardDescription>A breakdown of your expenses by category.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {spendingByCategoryChartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={spendingByCategoryChartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                            <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
-                            <YAxis 
-                                type="category" 
-                                dataKey="category" 
-                                width={120}
-                                tick={{ fontSize: 12 }}
-                                interval={0}
-                            />
-                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                            <Bar dataKey="total" fill="hsl(var(--chart-2))" name="Total Spent" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <div className="h-60 bg-muted rounded-md flex items-center justify-center">
-                        <p className="text-muted-foreground">Categorize expense transactions to see the chart</p>
+
+        <Card className="col-span-full">
+            <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div className="md:col-span-2">
+                        {spendingByCategoryChartData.length > 0 ? (
+                            <div className="relative w-full h-[350px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                                        <Pie
+                                            data={spendingByCategoryChartData}
+                                            cx="50%"
+                                            cy="50%"
+                                            labelLine={false}
+                                            innerRadius={80}
+                                            outerRadius={120}
+                                            fill="#8884d8"
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                        >
+                                            {spendingByCategoryChartData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                                            ))}
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <p className="text-sm text-muted-foreground">Monthly</p>
+                                    <p className="text-2xl font-bold">{formatCurrency(totalSpending)}</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-[350px] bg-muted rounded-md flex items-center justify-center">
+                                <p className="text-muted-foreground">Categorize expense transactions to see the chart</p>
+                            </div>
+                        )}
                     </div>
-                )}
+                    <div className="md:col-span-1 space-y-4">
+                        <div>
+                            <p className="text-sm text-muted-foreground">TOTAL SPENDING</p>
+                            <p className="text-2xl font-bold">{formatCurrency(totalSpending)}</p>
+                            <p className="text-xs text-muted-foreground">For this time period</p>
+                        </div>
+                        <Separator />
+                        <div>
+                            <p className="text-sm text-muted-foreground">AVERAGE SPENDING</p>
+                            <p className="text-2xl font-bold">{formatCurrency(totalSpending)}</p>
+                            <p className="text-xs text-muted-foreground">Per month</p>
+                        </div>
+                        <Separator />
+                        <div>
+                             <h4 className="text-sm font-semibold mb-2">CATEGORIES</h4>
+                             <ul className="space-y-2">
+                                {spendingByCategoryChartData.map((item) => (
+                                    <li key={item.name} className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
+                                            <span className="text-muted-foreground">{categoryIcons[item.name]}</span>
+                                            <span>{item.name}</span>
+                                        </div>
+                                        <span className="font-medium">{formatCurrency(item.value)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </CardContent>
         </Card>
+
 
         <Card className="col-span-full">
             <CardHeader>
