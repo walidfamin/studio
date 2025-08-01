@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useParams } from "next/navigation";
 import { Transaction } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import * as XLSX from 'xlsx';
 
 export default function AccountDetailPage() {
     const params = useParams();
@@ -37,71 +38,112 @@ export default function AccountDetailPage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target?.result as string;
-                try {
-                    const lines = text.split('\n').slice(1); // Skip header row
-                    const newTransactions: Transaction[] = lines.map((line, index) => {
-                        if (!line.trim()) return null; // Skip empty lines
-                        const [date, description, crDr, amountStr] = line.split(',');
-                         if (!date || !description || !crDr || !amountStr) {
-                            throw new Error(`Invalid data on line ${index + 2}: Each row must have 4 values.`);
-                        }
-                        const amount = parseFloat(amountStr);
-                        if (isNaN(amount)) {
-                             throw new Error(`Invalid amount on line ${index + 2}: '${amountStr}' is not a valid number.`);
-                        }
-                        return {
-                            id: `imported_${Date.now()}_${index}`,
-                            date: new Date(date.trim()).toISOString(),
-                            description: description.trim(),
-                            amount: amount,
-                            type: crDr.trim().toUpperCase() === 'CR' ? 'income' : 'expense',
-                            category: 'Uncategorized',
-                            accountId: accountId,
-                        };
-                    }).filter((t): t is Transaction => t !== null); // Filter out empty lines
-
-                    if (newTransactions.length === 0) {
-                        toast({
-                            variant: "destructive",
-                            title: "Import Error",
-                            description: "The selected file is empty or does not contain valid data.",
-                        });
-                        return;
-                    }
-
-                    setTransactions(prev => [...newTransactions, ...prev]);
-                    toast({
-                        title: "Import Successful",
-                        description: `${newTransactions.length} transaction(s) have been imported.`,
-                    });
-                } catch (error: any) {
-                     toast({
-                        variant: "destructive",
-                        title: "Import Failed",
-                        description: error.message || "An unexpected error occurred during import.",
-                    });
-                } finally {
-                    // Reset file input to allow re-uploading the same file
-                    if(fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                    }
+    const processData = (data: any[][]) => {
+        try {
+            // Remove header row
+            const rows = data.slice(1);
+            
+            const newTransactions: Transaction[] = rows.map((row, index) => {
+                if (!row || row.length < 4) {
+                    console.warn(`Skipping invalid row ${index + 2}:`, row);
+                    return null;
                 }
-            };
-            reader.onerror = () => {
+
+                const [dateStr, description, crDr, amountStr] = row;
+                
+                if (!dateStr || !description || !crDr || !amountStr) {
+                    throw new Error(`Invalid data on row ${index + 2}: Each row must have at least 4 values.`);
+                }
+
+                const date = typeof dateStr === 'number' ? new Date(Date.UTC(0,0, dateStr -1)) : new Date(dateStr);
+                if (isNaN(date.getTime())) {
+                    throw new Error(`Invalid date on row ${index + 2}: '${dateStr}'`);
+                }
+
+                const amount = parseFloat(amountStr);
+                if (isNaN(amount)) {
+                    throw new Error(`Invalid amount on row ${index + 2}: '${amountStr}' is not a valid number.`);
+                }
+                
+                return {
+                    id: `imported_${Date.now()}_${index}`,
+                    date: date.toISOString(),
+                    description: description.trim(),
+                    amount: amount,
+                    type: crDr.trim().toUpperCase() === 'CR' ? 'income' : 'expense',
+                    category: 'Uncategorized',
+                    accountId: accountId,
+                };
+            }).filter((t): t is Transaction => t !== null);
+
+            if (newTransactions.length === 0) {
                 toast({
                     variant: "destructive",
-                    title: "File Read Error",
-                    description: "Could not read the selected file.",
+                    title: "Import Error",
+                    description: "The selected file is empty or does not contain valid data.",
                 });
+                return;
             }
-            reader.readAsText(file);
+
+            setTransactions(prev => [...newTransactions, ...prev]);
+            toast({
+                title: "Import Successful",
+                description: `${newTransactions.length} transaction(s) have been imported.`,
+            });
+        } catch (error: any) {
+            console.error("Import failed:", error);
+            toast({
+                variant: "destructive",
+                title: "Import Failed",
+                description: error.message || "An unexpected error occurred during import.",
+            });
+        } finally {
+            if(fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
         }
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        if (file.name.endsWith('.csv')) {
+            reader.onload = (e) => {
+                const text = e.target?.result as string;
+                // Simple CSV parsing
+                const lines = text.split('\n');
+                const data = lines.map(line => line.split(',').map(item => item.trim()));
+                processData(data);
+            };
+            reader.readAsText(file);
+        } else if (file.name.endsWith('.xlsx')) {
+            reader.onload = (e) => {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                processData(json as any[][]);
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Unsupported File Type",
+                description: "Please upload a .csv or .xlsx file.",
+            });
+        }
+
+        reader.onerror = () => {
+            toast({
+                variant: "destructive",
+                title: "File Read Error",
+                description: "Could not read the selected file.",
+            });
+        };
     };
 
 
@@ -118,7 +160,7 @@ export default function AccountDetailPage() {
                 ref={fileInputRef} 
                 className="hidden" 
                 onChange={handleFileChange}
-                accept=".csv"
+                accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
             />
             <Button variant="outline" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4"/> Import</Button>
             <Button variant="outline" asChild>
