@@ -14,7 +14,7 @@ export function IncomeTracker() {
         <TrendingUp className="h-5 w-5 text-accent" />
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">$5,350.00</div>
+        <div className="text-3xl font-bold">{ (5350.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</div>
         <p className="text-xs text-muted-foreground">
           +15.2% from last month
         </p>

@@ -61,7 +61,7 @@ export function RecentTransactions() {
                 <TableCell className="hidden sm:table-cell">{transaction.category}</TableCell>
                 <TableCell className="hidden md:table-cell">{format(new Date(transaction.date), 'PP')}</TableCell>
                 <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-foreground'}`}>
-                    {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                    {transaction.type === 'income' ? '+' : '-'}{transaction.amount.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
                 </TableCell>
               </TableRow>
             ))}

@@ -76,7 +76,7 @@ export default function AppSidebar() {
                         <ChevronDown className="w-4 h-4 transition-transform duration-200" />
                         <span className="text-xs font-bold uppercase">{type}</span>
                     </div>
-                    <span className="text-xs font-mono">{group.total.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>
+                    <span className="text-xs font-mono">{group.total.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</span>
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 pr-2 py-1 space-y-1 text-sm">
@@ -84,7 +84,7 @@ export default function AppSidebar() {
                   <div key={account.id} className="flex justify-between items-center text-sidebar-foreground/70">
                     <span>{account.name}</span>
                     <span className={`font-mono ${account.negative ? 'text-red-400' : ''}`}>
-                        {account.balance.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                        {account.balance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
                     </span>
                   </div>
                 ))}

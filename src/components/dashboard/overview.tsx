@@ -42,13 +42,13 @@ export function AccountOverview() {
                 {accountIcons[account.type]}
                 <p className="text-sm font-medium">{account.name}</p>
               </div>
-              <p className="text-sm font-semibold">${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-sm font-semibold">{account.balance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</p>
             </div>
           ))}
           <Separator />
           <div className="flex items-center justify-between font-bold text-lg">
             <p>Total Net Worth</p>
-            <p>${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p>{totalBalance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</p>
           </div>
         </div>
       </CardContent>

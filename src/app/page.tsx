@@ -53,25 +53,25 @@ export default function DashboardPage() {
                     <CardContent className="space-y-6">
                       <div>
                         <p className="text-xs text-muted-foreground">TOTAL SPENDING</p>
-                        <p className="text-2xl font-bold">$1,695.00</p>
+                        <p className="text-2xl font-bold">{ (1695.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</p>
                         <p className="text-xs text-muted-foreground">For this time period</p>
                       </div>
                       <Separator/>
                       <div>
                         <p className="text-xs text-muted-foreground">AVERAGE SPENDING</p>
-                        <p className="text-2xl font-bold">$1,695.00</p>
+                        <p className="text-2xl font-bold">{ (1695.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</p>
                         <p className="text-xs text-muted-foreground">Per month</p>
                       </div>
                       <Separator/>
                       <div>
                         <h3 className="text-sm font-medium mb-2">CATEGORIES</h3>
                         <div className="space-y-2 text-sm">
-                          <div className="flex justify-between"><span>Rent/Mortgage</span> <span>$1,000.00</span></div>
-                          <div className="flex justify-between"><span>Groceries</span> <span>$465.00</span></div>
-                          <div className="flex justify-between"><span>Electric</span> <span>$85.00</span></div>
-                          <div className="flex justify-between"><span>Transportation</span> <span>$70.00</span></div>
-                          <div className="flex justify-between"><span>Phone</span> <span>$70.00</span></div>
-                          <div className="flex justify-between"><span>TV</span> <span>$5.00</span></div>
+                          <div className="flex justify-between"><span>Rent/Mortgage</span> <span>{ (1000.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></div>
+                          <div className="flex justify-between"><span>Groceries</span> <span>{ (465.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></div>
+                          <div className="flex justify-between"><span>Electric</span> <span>{ (85.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></div>
+                          <div className="flex justify-between"><span>Transportation</span> <span>{ (70.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></div>
+                          <div className="flex justify-between"><span>Phone</span> <span>{ (70.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></div>
+                          <div className="flex justify-between"><span>TV</span> <span>{ (5.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></div>
                         </div>
                       </div>
                     </CardContent>

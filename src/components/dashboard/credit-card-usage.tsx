@@ -22,12 +22,12 @@ export function CreditCardUsage() {
           <CreditCard className="w-5 h-5 text-accent" />
           Credit Card
         </CardTitle>
-        <CardDescription>Limit: ${limit.toLocaleString()}</CardDescription>
+        <CardDescription>Limit: {limit.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">${spent.toLocaleString()} spent</div>
+        <div className="text-2xl font-bold">{spent.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} spent</div>
         <p className="text-xs text-muted-foreground">
-          ${(limit - spent).toLocaleString()} remaining
+          {(limit - spent).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} remaining
         </p>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2">

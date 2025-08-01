@@ -74,7 +74,7 @@ function AccountRow({ account }: { account: Account }) {
                 </ResponsiveContainer>
             </div>
             <div className="text-right">
-                <p className="font-semibold">${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="font-semibold">{account.balance.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</p>
                 <p className="text-sm text-muted-foreground">17 hours ago</p>
             </div>
         </div>
@@ -91,10 +91,10 @@ function AccountGroup({ title, accounts, change, changePercent }: { title: strin
             <CardHeader>
                 <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</CardTitle>
                 <div className="flex items-baseline gap-2">
-                    <p className="text-2xl font-bold">${Math.abs(total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold">{Math.abs(total).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</p>
                     <div className={`flex items-center text-sm ${isChangePositive ? 'text-green-500' : 'text-red-500'}`}>
                         <ArrowUp className={`w-4 h-4 ${!isChangePositive && 'rotate-180'}`} />
-                        <span>${change.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({changePercent.toFixed(1)}%)</span>
+                        <span>{change.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} ({changePercent.toFixed(1)}%)</span>
                         <span className="text-muted-foreground ml-2">This month</span>
                     </div>
                 </div>
@@ -127,10 +127,10 @@ export default function AccountsPage() {
                             <div>
                                 <CardDescription>NET WORTH</CardDescription>
                                 <div className="flex items-baseline gap-2">
-                                    <CardTitle className="text-4xl font-bold">${netWorth.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</CardTitle>
+                                    <CardTitle className="text-4xl font-bold">{netWorth.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</CardTitle>
                                     <div className="flex items-center text-green-500">
                                         <ArrowUp className="w-4 h-4"/>
-                                        <span>$4,622.51 (0.7%) This month</span>
+                                        <span>AED 4,622.51 (0.7%) This month</span>
                                     </div>
                                 </div>
                             </div>
@@ -163,8 +163,8 @@ export default function AccountsPage() {
                             <ComposedChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={10} />
-                                <YAxis tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `$${Number(value) / 1000}k`} />
-                                <Tooltip />
+                                <YAxis tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `${Number(value) / 1000}k AED`} />
+                                <Tooltip formatter={(value: number) => value.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}/>
                                 <Legend />
                                 <Bar dataKey="cash" stackId="a" fill="hsl(var(--chart-1))" name="Cash" />
                                 <Bar dataKey="investments" stackId="a" fill="hsl(var(--chart-2))" name="Investments"/>
@@ -196,28 +196,28 @@ export default function AccountsPage() {
                         <div>
                             <h3 className="text-lg font-semibold mb-2">Assets</h3>
                             <ul className="space-y-2 text-sm">
-                                <li className="flex justify-between"><span>Investments</span><span>$541,718.23</span></li>
-                                <li className="flex justify-between"><span>Real Estate</span><span>$350,000.00</span></li>
-                                <li className="flex justify-between"><span>Cash</span><span>$66,006.01</span></li>
-                                <li className="flex justify-between"><span>Vehicles</span><span>$0.00</span></li>
+                                <li className="flex justify-between"><span>Investments</span><span>{ (541718.23).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
+                                <li className="flex justify-between"><span>Real Estate</span><span>{ (350000.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
+                                <li className="flex justify-between"><span>Cash</span><span>{ (66006.01).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
+                                <li className="flex justify-between"><span>Vehicles</span><span>{ (0).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
                             </ul>
                             <Separator className="my-4" />
                             <div className="flex justify-between font-bold">
                                 <span>Total Assets</span>
-                                <span>$957,724.24</span>
+                                <span>{ (957724.24).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span>
                             </div>
                         </div>
                         <Separator className="my-4"/>
                         <div>
                             <h3 className="text-lg font-semibold mb-2">Liabilities</h3>
                              <ul className="space-y-2 text-sm">
-                                <li className="flex justify-between"><span>Loans</span><span>$270,350.06</span></li>
-                                <li className="flex justify-between"><span>Credit Cards</span><span>$2,076.53</span></li>
+                                <li className="flex justify-between"><span>Loans</span><span>{ (270350.06).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
+                                <li className="flex justify-between"><span>Credit Cards</span><span>{ (2076.53).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
                             </ul>
                             <Separator className="my-4" />
                             <div className="flex justify-between font-bold">
                                 <span>Total Liabilities</span>
-                                <span>$272,426.59</span>
+                                <span>{ (272426.59).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span>
                             </div>
                         </div>
                     </CardContent>

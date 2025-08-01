@@ -42,11 +42,11 @@ export function SpendingBreakdown() {
                 content={
                   <ChartTooltipContent
                     hideLabel
-                    formatter={(value, name, props) => {
+                    formatter={(value: number, name, props) => {
                       return (
                         <div className='flex flex-col items-center'>
                           <span className='text-muted-foreground'>{props.payload.category}</span>
-                          <span className='font-bold'>${value.toLocaleString()}</span>
+                          <span className='font-bold'>{value.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</span>
                         </div>
                       )
                     }}
@@ -73,7 +73,7 @@ export function SpendingBreakdown() {
             Monthly
         </div>
         <div className="leading-none text-2xl font-bold">
-            ${totalValue.toLocaleString()}
+            {totalValue.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}
         </div>
       </CardFooter>
     </Card>
