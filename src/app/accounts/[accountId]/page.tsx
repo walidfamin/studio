@@ -12,6 +12,34 @@ import { Transaction } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 
+function parseFlexibleDate(dateStr: string | number): Date {
+    if (typeof dateStr === 'number') {
+        // Handle Excel's serial date number
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+        return new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
+    }
+    
+    if (typeof dateStr === 'string') {
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10);
+                const year = parseInt(parts[2], 10);
+                // Handles MM/DD/YYYY and DD/MM/YYYY by checking if month > 12
+                if (month > 12) {
+                     return new Date(`${year}-${day}-${month}`); // DD/MM/YYYY parsed as such
+                }
+                 // Standard constructor assumes MM/DD/YYYY, which works for US-style dates
+                 return new Date(`${year}-${month}-${day}`);
+            }
+        }
+    }
+    // Fallback for ISO 8601 or other standard formats
+    return new Date(dateStr);
+}
+
+
 export default function AccountDetailPage() {
     const params = useParams();
     const accountId = params.accountId as string;
@@ -58,26 +86,7 @@ export default function AccountDetailPage() {
                     throw new Error(`Invalid data on row ${originalRowNumber}: Each row must have at least 4 values. Found: ${row.join(', ')}`);
                 }
 
-                let date;
-                if (typeof dateStr === 'number') {
-                    // Handle Excel's serial date number
-                    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-                    date = new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
-                } else if (typeof dateStr === 'string' && dateStr.includes('/')) {
-                    // Handle 'DD/MM/YYYY' format
-                    const parts = dateStr.split('/');
-                    if (parts.length === 3) {
-                        const day = parseInt(parts[0], 10);
-                        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-                        const year = parseInt(parts[2], 10);
-                        date = new Date(year, month, day);
-                    } else {
-                        date = new Date(dateStr); // Fallback for other string formats
-                    }
-                }
-                else {
-                    date = new Date(dateStr);
-                }
+                const date = parseFlexibleDate(dateStr);
 
                 if (isNaN(date.getTime())) {
                     throw new Error(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
