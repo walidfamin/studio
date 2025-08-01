@@ -20,23 +20,37 @@ function parseFlexibleDate(dateStr: string | number): Date {
     }
     
     if (typeof dateStr === 'string') {
+        // Updated to handle DD/MM/YYYY and DD/MM/YY
         if (dateStr.includes('/')) {
             const parts = dateStr.split('/');
             if (parts.length === 3) {
                 const day = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10);
-                const year = parseInt(parts[2], 10);
-                // Handles MM/DD/YYYY and DD/MM/YYYY by checking if month > 12
-                if (month > 12) {
-                     return new Date(`${year}-${day}-${month}`); // DD/MM/YYYY parsed as such
+                const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JS
+                let year = parseInt(parts[2], 10);
+
+                if (year < 100) {
+                    // Handles 'YY' format, assumes 21st century
+                    year += 2000;
                 }
-                 // Standard constructor assumes MM/DD/YYYY, which works for US-style dates
-                 return new Date(`${year}-${month}-${day}`);
+                
+                // Create date in UTC to avoid timezone issues
+                const date = new Date(Date.UTC(year, month, day));
+
+                // Basic validation: Check if the constructed date parts match the input
+                // This helps catch errors like `13/01/2024` being parsed as `01/01/2025` if month was > 12.
+                if (date.getUTCDate() === day && date.getUTCMonth() === month && date.getUTCFullYear() === year) {
+                    return date;
+                }
             }
         }
     }
-    // Fallback for ISO 8601 or other standard formats
-    return new Date(dateStr);
+    // Fallback for ISO 8601 or other standard formats that new Date() can handle
+    const fallbackDate = new Date(dateStr);
+    if (!isNaN(fallbackDate.getTime())) {
+        return fallbackDate;
+    }
+    // Return an invalid date if all parsing fails
+    return new Date('invalid');
 }
 
 
