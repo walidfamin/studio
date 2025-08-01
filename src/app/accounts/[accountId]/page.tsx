@@ -63,7 +63,19 @@ export default function AccountDetailPage() {
                     // Handle Excel's serial date number
                     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
                     date = new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
-                } else {
+                } else if (typeof dateStr === 'string' && dateStr.includes('/')) {
+                    // Handle 'DD/MM/YYYY' format
+                    const parts = dateStr.split('/');
+                    if (parts.length === 3) {
+                        const day = parseInt(parts[0], 10);
+                        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+                        const year = parseInt(parts[2], 10);
+                        date = new Date(year, month, day);
+                    } else {
+                        date = new Date(dateStr); // Fallback for other string formats
+                    }
+                }
+                else {
                     date = new Date(dateStr);
                 }
 
@@ -121,10 +133,10 @@ export default function AccountDetailPage() {
 
         const reader = new FileReader();
         const processFile = (data: any) => {
-            const workbook = XLSX.read(data, { type: file.name.endsWith('.csv') ? 'string' : 'array' });
+            const workbook = XLSX.read(data, { type: file.name.endsWith('.csv') ? 'string' : 'array', cellDates: true });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false, dateNF:'dd/mm/yyyy' });
             processData(json as any[][]);
         };
 
