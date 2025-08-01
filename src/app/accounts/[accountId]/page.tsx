@@ -121,13 +121,21 @@ export default function AccountDetailPage() {
                     throw new Error(`Invalid amount on row ${originalRowNumber}: '${amountStr}' is not a valid number.`);
                 }
                 
+                const descriptionStr = String(description).trim();
+                const type = String(crDr).trim().toUpperCase() === 'CR' ? 'income' : 'expense';
+                let category = 'Uncategorized';
+
+                if (type === 'income' || descriptionStr.toLowerCase().includes('payment received, thank')) {
+                    category = 'Credit Card Payment';
+                }
+
                 return {
                     id: `imported_${Date.now()}_${index}`,
                     date: date.toISOString(),
-                    description: String(description).trim(),
+                    description: descriptionStr,
                     amount: amount,
-                    type: String(crDr).trim().toUpperCase() === 'CR' ? 'income' : 'expense',
-                    category: 'Uncategorized',
+                    type: type,
+                    category: category,
                     accountId: accountId,
                 };
             }).filter((t): t is Transaction => t !== null);
