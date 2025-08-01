@@ -2,18 +2,27 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { accounts, transactions } from "@/lib/data";
+import { accounts, transactions as initialTransactions } from "@/lib/data";
 import { Download, Upload } from "lucide-react";
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useParams } from "next/navigation";
+import { Transaction } from "@/lib/types";
 
 export default function AccountDetailPage() {
     const params = useParams();
     const accountId = params.accountId as string;
     const account = accounts.find(a => a.id === accountId);
-    const accountTransactions = transactions.filter(t => t.accountId === accountId);
+    
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+    useEffect(() => {
+        if (accountId) {
+            setTransactions(initialTransactions.filter(t => t.accountId === accountId));
+        }
+    }, [accountId]);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
@@ -28,12 +37,54 @@ export default function AccountDetailPage() {
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // Here you would typically handle the file upload and parsing.
-            // For now, we'll just show a toast notification.
-            toast({
-                title: "File Selected",
-                description: `${file.name} is ready for import.`,
-            });
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target?.result as string;
+                try {
+                    const lines = text.split('\n').slice(1); // Skip header row
+                    const newTransactions: Transaction[] = lines.map((line, index) => {
+                        const [date, description, amountStr, type, category] = line.split(',');
+                        if (!date || !description || !amountStr || !type || !category) {
+                            throw new Error(`Invalid data on line ${index + 2}`);
+                        }
+                        const amount = parseFloat(amountStr);
+                        if (isNaN(amount)) {
+                             throw new Error(`Invalid amount on line ${index + 2}`);
+                        }
+                        return {
+                            id: `imported_${Date.now()}_${index}`,
+                            date: new Date(date.trim()).toISOString(),
+                            description: description.trim(),
+                            amount: amount,
+                            type: type.trim() as 'income' | 'expense',
+                            category: category.trim(),
+                            accountId: accountId,
+                        };
+                    }).filter(t => t.description); // Filter out empty lines
+
+                    if (newTransactions.length === 0) {
+                        toast({
+                            variant: "destructive",
+                            title: "Import Error",
+                            description: "The selected file is empty or in an invalid format.",
+                        });
+                        return;
+                    }
+
+                    setTransactions(prev => [...newTransactions, ...prev]);
+                    toast({
+                        title: "Import Successful",
+                        description: `${newTransactions.length} transaction(s) have been imported.`,
+                    });
+                } catch (error: any) {
+                     toast({
+                        variant: "destructive",
+                        title: "Import Failed",
+                        description: error.message || "An unexpected error occurred during import.",
+                    });
+                }
+            };
+            reader.readAsText(file);
         }
     };
 
@@ -89,7 +140,7 @@ export default function AccountDetailPage() {
             </CardHeader>
             <CardContent>
                 <ul>
-                    {accountTransactions.map(t => (
+                    {transactions.map(t => (
                         <li key={t.id} className="flex justify-between items-center py-2 border-b">
                             <div>
                                 <p className="font-medium">{t.description}</p>
