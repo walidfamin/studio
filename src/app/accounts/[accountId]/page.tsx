@@ -78,7 +78,7 @@ export default function AccountDetailPage() {
             }, 0);
             setAccount(prev => prev ? { ...prev, balance } : undefined);
         }
-    }, [transactions]);
+    }, [transactions, account]);
 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,14 +122,21 @@ export default function AccountDetailPage() {
                 }
                 
                 const descriptionStr = String(description).trim();
-                const type = String(crDr).trim().toUpperCase() === 'CR' ? 'income' : 'expense';
+                const typeRaw = String(crDr).trim().toUpperCase();
+                let type: 'income' | 'expense' = 'expense';
                 let category = 'Uncategorized';
                 
                 if (account?.type === 'Credit Card') {
-                    if (type === 'income' || descriptionStr.toLowerCase().includes('payment received, thank')) {
+                    if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received, thank')) {
+                        type = 'income';
                         category = 'Credit Card Payment';
+                    } else {
+                        type = 'expense';
                     }
+                } else {
+                    type = typeRaw === 'CR' ? 'income' : 'expense';
                 }
+
 
                 return {
                     id: `imported_${Date.now()}_${index}`,
