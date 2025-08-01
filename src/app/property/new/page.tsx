@@ -14,27 +14,73 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { addProperty } from "@/lib/data";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+
+const formSchema = z.object({
+    name: z.string().min(1, "Property name is required."),
+    location: z.string().min(1, "Location is required."),
+    totalValue: z.coerce.number().min(1, "Total price is required."),
+    downPayment: z.coerce.number().min(0),
+    paymentType: z.enum(['mortgage', 'cash', 'installment']),
+    loanAmount: z.coerce.number().optional(),
+    installmentAmount: z.coerce.number().optional(),
+    cashContributors: z.string().optional(),
+    paymentPlan: z.array(z.object({
+        date: z.string().min(1, "Date is required."),
+        amount: z.coerce.number().min(1, "Amount is required.")
+    })).optional(),
+});
 
 
 export default function NewPropertyPage() {
+    const router = useRouter();
+    const { toast } = useToast();
 
-    const [paymentType, setPaymentType] = useState<'mortgage' | 'cash' | 'installment'>('mortgage');
-    const [installments, setInstallments] = useState([{ date: '', amount: ''}]);
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            name: "",
+            location: "",
+            totalValue: 0,
+            downPayment: 0,
+            paymentType: 'mortgage',
+            paymentPlan: [{ date: '', amount: 0 }],
+        },
+    });
 
-    const handleAddInstallment = () => {
-        setInstallments([...installments, { date: '', amount: '' }]);
-    };
+    const paymentType = form.watch('paymentType');
 
-    const handleRemoveInstallment = (index: number) => {
-        const newInstallments = installments.filter((_, i) => i !== index);
-        setInstallments(newInstallments);
-    };
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "paymentPlan",
+    });
 
-    const handleInstallmentChange = (index: number, field: 'date' | 'amount', value: string) => {
-        const newInstallments = [...installments];
-        newInstallments[index][field] = value;
-        setInstallments(newInstallments);
+    const onSubmit = (values: z.infer<typeof formSchema>) => {
+        const newPropertyData = {
+            ...values,
+            loanAmount: values.loanAmount || 0,
+            installmentAmount: values.installmentAmount || 0,
+            paymentsMade: values.downPayment,
+            nextInstallmentDate: new Date().toISOString(), // Placeholder
+            paymentPlan: values.paymentPlan?.map(p => ({ ...p, status: 'unpaid' as const })),
+            cashContributors: values.cashContributors ? values.cashContributors.split(',').map(c => {
+                const [name, amount] = c.split('-').map(s => s.trim());
+                return { name, amount: parseFloat(amount) || 0 };
+            }) : [],
+        };
+        const newProperty = addProperty(newPropertyData);
+        toast({
+            title: "Property Added",
+            description: `"${newProperty.name}" has been successfully added.`,
+        });
+        router.push(`/property/${newProperty.id}`);
     };
 
     return (
@@ -51,137 +97,194 @@ export default function NewPropertyPage() {
                     <CardDescription>Enter the details of your new property asset.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form className="space-y-8">
-                        {/* Property Details */}
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-foreground">Property Details</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="property-name">Property Name</Label>
-                                    <Input id="property-name" placeholder="e.g., Marina View Apartment" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="location">Location</Label>
-                                    <Input id="location" placeholder="e.g., Dubai, UAE" required />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Financials */}
-                         <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-foreground">Financials</h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="total-price">Total Price (AED)</Label>
-                                    <Input id="total-price" type="number" placeholder="1,200,000" required />
-                                </div>
-                                 <div className="space-y-2">
-                                    <Label htmlFor="down-payment">Amount Paid / Down Payment (AED)</Label>
-                                    <Input id="down-payment" type="number" placeholder="240,000" required />
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* Payment Method */}
-                        <div className="space-y-4">
-                             <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-semibold text-foreground">Payment Method</h3>
-                                 <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="w-5 h-5">
-                                            <Info className="w-4 h-4 text-muted-foreground"/>
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="text-sm">
-                                        Select how this property was financed.
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                             <RadioGroup value={paymentType} onValueChange={(value) => setPaymentType(value as 'mortgage' | 'cash' | 'installment')} className="flex flex-wrap gap-4">
-                                <Label htmlFor="r-mortgage" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                                  <RadioGroupItem value="mortgage" id="r-mortgage" />
-                                  Mortgage / Loan
-                                </Label>
-                                <Label htmlFor="r-cash" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                                  <RadioGroupItem value="cash" id="r-cash" />
-                                  Paid in Cash
-                                </Label>
-                                <Label htmlFor="r-installment" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                                  <RadioGroupItem value="installment" id="r-installment" />
-                                  Installment Plan
-                                </Label>
-                            </RadioGroup>
-                        </div>
-
-
-                        {/* Conditional Fields */}
-                        {paymentType === 'mortgage' && (
-                            <div className="space-y-4 p-4 border rounded-md bg-muted/50">
-                                <h4 className="font-semibold">Mortgage Details</h4>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                            {/* Property Details */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-foreground">Property Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="loan-amount">Loan Amount (AED)</Label>
-                                        <Input id="loan-amount" type="number" placeholder="960,000" required />
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Property Name</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="e.g., Marina View Apartment" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="location"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Location</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="e.g., Dubai, UAE" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Financials */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-foreground">Financials</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="totalValue"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Total Price (AED)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="1,200,000" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="downPayment"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Amount Paid / Down Payment (AED)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="240,000" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+                            
+                            {/* Payment Method */}
+                            <FormField
+                                control={form.control}
+                                name="paymentType"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-lg font-semibold text-foreground">Payment Method</h3>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="w-5 h-5"><Info className="w-4 h-4 text-muted-foreground"/></Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="text-sm">Select how this property was financed.</PopoverContent>
+                                            </Popover>
+                                        </div>
+                                        <FormControl>
+                                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap gap-4">
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Label htmlFor="r-mortgage" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
+                                                            <RadioGroupItem value="mortgage" id="r-mortgage" /> Mortgage / Loan
+                                                        </Label>
+                                                    </FormControl>
+                                                </FormItem>
+                                                <FormItem>
+                                                    <FormControl>
+                                                         <Label htmlFor="r-cash" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
+                                                            <RadioGroupItem value="cash" id="r-cash" /> Paid in Cash
+                                                        </Label>
+                                                    </FormControl>
+                                                </FormItem>
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Label htmlFor="r-installment" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
+                                                            <RadioGroupItem value="installment" id="r-installment" /> Installment Plan
+                                                        </Label>
+                                                    </FormControl>
+                                                </FormItem>
+                                            </RadioGroup>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Conditional Fields */}
+                            {paymentType === 'mortgage' && (
+                                <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                                    <h4 className="font-semibold">Mortgage Details</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField control={form.control} name="loanAmount" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Loan Amount (AED)</FormLabel>
+                                                <FormControl><Input type="number" placeholder="960,000" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                        <FormField control={form.control} name="installmentAmount" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Monthly Installment (AED)</FormLabel>
+                                                <FormControl><Input type="number" placeholder="5,500" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentType === 'cash' && (
+                                <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                                    <h4 className="font-semibold">Cash Payment Details</h4>
+                                    <FormField control={form.control} name="cashContributors" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Contributors</FormLabel>
+                                            <FormControl><Textarea placeholder="e.g., John Doe - 500,000 AED, Jane Doe - 500,000 AED" {...field} /></FormControl>
+                                            <p className="text-xs text-muted-foreground">If paid by multiple people, note down each person and their contribution.</p>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                </div>
+                            )}
+                            
+                            {paymentType === 'installment' && (
+                                <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="font-semibold">Installment Plan</h4>
+                                        <Button type="button" variant="outline" size="sm" onClick={() => append({ date: '', amount: 0 })}><PlusCircle className="mr-2 h-4 w-4"/> Add Row</Button>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="installment-amount">Monthly Installment (AED)</Label>
-                                        <Input id="installment-amount" type="number" placeholder="5,500" required />
+                                        {fields.map((field, index) => (
+                                            <div key={field.id} className="flex items-start gap-2">
+                                                <FormField control={form.control} name={`paymentPlan.${index}.date`} render={({ field }) => (
+                                                    <FormItem className="flex-1">
+                                                        <FormControl><Input type="date" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}/>
+                                                <FormField control={form.control} name={`paymentPlan.${index}.amount`} render={({ field }) => (
+                                                    <FormItem className="w-32">
+                                                        <FormControl><Input type="number" placeholder="Amount" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}/>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {paymentType === 'cash' && (
-                             <div className="space-y-4 p-4 border rounded-md bg-muted/50">
-                                <h4 className="font-semibold">Cash Payment Details</h4>
-                                 <div className="space-y-2">
-                                    <Label htmlFor="contributors">Contributors</Label>
-                                     <Textarea id="contributors" placeholder="e.g., John Doe - 500,000 AED, Jane Doe - 500,000 AED" />
-                                     <p className="text-xs text-muted-foreground">
-                                        If paid by multiple people, note down each person and their contribution.
-                                     </p>
-                                </div>
+                            <div className="flex justify-end gap-2 pt-4">
+                                <Button variant="outline" asChild>
+                                    <Link href="/property">Cancel</Link>
+                                </Button>
+                                <Button type="submit">Add Property</Button>
                             </div>
-                        )}
-
-                        {paymentType === 'installment' && (
-                             <div className="space-y-4 p-4 border rounded-md bg-muted/50">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="font-semibold">Installment Plan</h4>
-                                    <Button type="button" variant="outline" size="sm" onClick={handleAddInstallment}><PlusCircle className="mr-2 h-4 w-4"/> Add Row</Button>
-                                </div>
-                                <div className="space-y-2">
-                                    {installments.map((inst, index) => (
-                                        <div key={index} className="flex items-center gap-2">
-                                            <Input 
-                                                type="date" 
-                                                value={inst.date}
-                                                onChange={(e) => handleInstallmentChange(index, 'date', e.target.value)}
-                                                className="flex-1"
-                                            />
-                                            <Input 
-                                                type="number" 
-                                                placeholder="Amount" 
-                                                value={inst.amount}
-                                                onChange={(e) => handleInstallmentChange(index, 'amount', e.target.value)}
-                                                className="w-32"
-                                            />
-                                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveInstallment(index)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex justify-end gap-2 pt-4">
-                            <Button variant="outline" asChild>
-                                <Link href="/property">Cancel</Link>
-                            </Button>
-                            <Button type="submit">Add Property</Button>
-                        </div>
-                    </form>
+                        </form>
+                    </Form>
                 </CardContent>
             </Card>
         </div>

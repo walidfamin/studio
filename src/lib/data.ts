@@ -35,7 +35,7 @@ export const accounts: Account[] = [
     { id: 'rak_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'RAK BANK' },
 ];
 
-export const properties: Property[] = [
+export let properties: Property[] = [
     {
         id: 'prop1',
         name: 'Downtown Apartment',
@@ -54,3 +54,16 @@ export const properties: Property[] = [
         ]
     }
 ];
+
+export function addProperty(property: Omit<Property, 'id'>) {
+    const newProperty: Property = {
+        ...property,
+        id: `prop_${Date.now()}`
+    };
+    properties.push(newProperty);
+    return newProperty;
+}
+
+export function updateProperty(propertyId: string, updatedProperty: Partial<Property>) {
+    properties = properties.map(p => p.id === propertyId ? { ...p, ...updatedProperty } : p);
+}
