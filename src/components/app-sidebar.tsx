@@ -70,10 +70,10 @@ export default function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname.startsWith('/property')}>
-              <Link href="/property">
-                <Home />
-                <span>Property</span>
+            <SidebarMenuButton asChild isActive={pathname.startsWith('/investments')}>
+              <Link href="/investments">
+                <Landmark />
+                <span>Investments</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

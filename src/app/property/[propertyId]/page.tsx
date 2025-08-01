@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { properties } from "@/lib/data";
 import { Property } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import { format, formatDistanceToNow } from 'date-fns';
-import { ChevronLeft, Edit, Building, MapPin, Landmark, Banknote, Users, CalendarDays, BadgeCheck, BadgeX } from "lucide-react";
+import { format } from 'date-fns';
+import { ChevronLeft, Edit, Landmark, Banknote, Users, CalendarDays, BadgeCheck, BadgeX } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
@@ -17,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 
 
-export default function PropertyDetailPage() {
+export default function InvestmentDetailPage() {
     const params = useParams();
     const propertyId = params.propertyId as string;
 
@@ -29,15 +30,15 @@ export default function PropertyDetailPage() {
         return (
             <div className="p-4 sm:p-6 lg:p-8">
                  <div className="mb-8">
-                     <Link href="/property" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                     <Link href="/investments" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
                         <ChevronLeft className="w-4 h-4" />
-                        <span>Back to Properties</span>
+                        <span>Back to Investments</span>
                     </Link>
                 </div>
                 <Card className="text-center py-16">
                     <CardHeader>
-                        <CardTitle>Property not found</CardTitle>
-                        <CardDescription>The property you are looking for does not exist.</CardDescription>
+                        <CardTitle>Investment not found</CardTitle>
+                        <CardDescription>The investment you are looking for does not exist.</CardDescription>
                     </CardHeader>
                 </Card>
             </div>
@@ -52,17 +53,16 @@ export default function PropertyDetailPage() {
         <div className="p-4 sm:p-6 lg:p-8">
              <header className="flex items-center justify-between mb-8">
                 <div>
-                     <Link href="/property" className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2">
+                     <Link href="/investments" className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2">
                         <ChevronLeft className="w-4 h-4" />
-                        <span>Back to Properties</span>
+                        <span>Back to Investments</span>
                     </Link>
                     <h1 className="text-3xl font-bold font-headline">{property.name}</h1>
-                    <p className="text-lg text-muted-foreground flex items-center gap-2"><MapPin className="w-4 h-4" /> {property.location}</p>
                 </div>
                 <div className="flex items-center gap-2">
                      <Button variant="outline" asChild>
-                        <Link href={`/property/${property.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4"/> Edit Property
+                        <Link href={`/investments/${property.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4"/> Edit Investment
                         </Link>
                     </Button>
                 </div>
@@ -80,7 +80,7 @@ export default function PropertyDetailPage() {
                                 <p className="text-2xl font-bold">{formatCurrency(property.totalValue)}</p>
                             </div>
                              <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Amount Paid / Down Payment</p>
+                                <p className="text-sm text-muted-foreground">Initial Investment</p>
                                 <p className="text-2xl font-bold">{formatCurrency(property.downPayment)}</p>
                             </div>
                             <div className="space-y-1">

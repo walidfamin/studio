@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -25,10 +26,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Property } from "@/lib/types";
 
 const formSchema = z.object({
-    name: z.string().min(1, "Property name is required."),
-    location: z.string().min(1, "Location is required."),
-    totalValue: z.coerce.number().min(1, "Total price is required."),
-    downPayment: z.coerce.number().min(0),
+    name: z.string().min(1, "Investment name is required."),
+    totalValue: z.coerce.number().min(1, "Total value is required."),
+    downPayment: z.coerce.number().min(0, "Initial investment is required."),
     paymentType: z.enum(['mortgage', 'cash', 'installment']),
     loanAmount: z.coerce.number().optional(),
     installmentAmount: z.coerce.number().optional(),
@@ -40,7 +40,7 @@ const formSchema = z.object({
 });
 
 
-export default function EditPropertyPage() {
+export default function EditInvestmentPage() {
     const params = useParams();
     const router = useRouter();
     const { toast } = useToast();
@@ -58,7 +58,6 @@ export default function EditPropertyPage() {
         if (property) {
             form.reset({
                 name: property.name,
-                location: property.location,
                 totalValue: property.totalValue,
                 downPayment: property.downPayment,
                 paymentType: property.paymentType,
@@ -83,6 +82,7 @@ export default function EditPropertyPage() {
         
         const updatedPropertyData = {
             ...values,
+            location: '', // No longer used
             loanAmount: values.loanAmount || 0,
             installmentAmount: values.installmentAmount || 0,
             paymentPlan: values.paymentPlan?.map(p => ({ ...p, status: 'unpaid' as const })), // simplified status
@@ -95,10 +95,10 @@ export default function EditPropertyPage() {
         updateProperty(propertyId, updatedPropertyData as Partial<Property>);
 
         toast({
-            title: "Property Updated",
+            title: "Investment Updated",
             description: `"${values.name}" has been successfully updated.`,
         });
-        router.push(`/property/${propertyId}`);
+        router.push(`/investments/${propertyId}`);
     };
     
     if (!property) {
@@ -106,12 +106,12 @@ export default function EditPropertyPage() {
              <div className="p-4 sm:p-6 lg:p-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Property Not Found</CardTitle>
+                        <CardTitle>Investment Not Found</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p>The property you are trying to edit does not exist.</p>
+                        <p>The investment you are trying to edit does not exist.</p>
                         <Button asChild className="mt-4">
-                            <Link href="/property">Back to Properties</Link>
+                            <Link href="/investments">Back to Investments</Link>
                         </Button>
                     </CardContent>
                 </Card>
@@ -122,33 +122,26 @@ export default function EditPropertyPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <div className="mb-8">
-                 <Link href={`/property/${propertyId}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                 <Link href={`/investments/${propertyId}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
                     <ChevronLeft className="w-4 h-4" />
-                    <span>Back to Property Details</span>
+                    <span>Back to Investment Details</span>
                 </Link>
             </div>
             <Card className="max-w-3xl mx-auto">
                 <CardHeader>
-                    <CardTitle className="font-headline">Edit Property</CardTitle>
-                    <CardDescription>Update the details of your property asset.</CardDescription>
+                    <CardTitle className="font-headline">Edit Investment</CardTitle>
+                    <CardDescription>Update the details of your investment asset.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                            {/* Property Details */}
+                            {/* Investment Details */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-foreground">Property Details</h3>
+                                <h3 className="text-lg font-semibold text-foreground">Investment Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField control={form.control} name="name" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Property Name</FormLabel>
-                                            <FormControl><Input {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-                                    <FormField control={form.control} name="location" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Location</FormLabel>
+                                            <FormLabel>Investment Name</FormLabel>
                                             <FormControl><Input {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -162,14 +155,14 @@ export default function EditPropertyPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                      <FormField control={form.control} name="totalValue" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Total Price (AED)</FormLabel>
+                                            <FormLabel>Total Value (AED)</FormLabel>
                                             <FormControl><Input type="number" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
                                     <FormField control={form.control} name="downPayment" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Amount Paid / Down Payment (AED)</FormLabel>
+                                            <FormLabel>Initial Investment (AED)</FormLabel>
                                             <FormControl><Input type="number" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -184,12 +177,12 @@ export default function EditPropertyPage() {
                                         <h3 className="text-lg font-semibold text-foreground">Payment Method</h3>
                                         <Popover>
                                             <PopoverTrigger asChild><Button variant="ghost" size="icon" className="w-5 h-5"><Info className="w-4 h-4 text-muted-foreground"/></Button></PopoverTrigger>
-                                            <PopoverContent className="text-sm">Select how this property was financed.</PopoverContent>
+                                            <PopoverContent className="text-sm">Select how this investment was financed.</PopoverContent>
                                         </Popover>
                                     </div>
                                     <FormControl>
                                         <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-wrap gap-4">
-                                            <FormItem><FormControl><Label htmlFor="r-mortgage" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary"><RadioGroupItem value="mortgage" id="r-mortgage" />Mortgage / Loan</Label></FormControl></FormItem>
+                                            <FormItem><FormControl><Label htmlFor="r-mortgage" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary"><RadioGroupItem value="mortgage" id="r-mortgage" />Loan</Label></FormControl></FormItem>
                                             <FormItem><FormControl><Label htmlFor="r-cash" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary"><RadioGroupItem value="cash" id="r-cash" />Paid in Cash</Label></FormControl></FormItem>
                                             <FormItem><FormControl><Label htmlFor="r-installment" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary"><RadioGroupItem value="installment" id="r-installment" />Installment Plan</Label></FormControl></FormItem>
                                         </RadioGroup>
@@ -201,7 +194,7 @@ export default function EditPropertyPage() {
                             {/* Conditional Fields */}
                             {paymentType === 'mortgage' && (
                                 <div className="space-y-4 p-4 border rounded-md bg-muted/50">
-                                    <h4 className="font-semibold">Mortgage Details</h4>
+                                    <h4 className="font-semibold">Loan Details</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={form.control} name="loanAmount" render={({ field }) => (
                                             <FormItem>
@@ -227,7 +220,7 @@ export default function EditPropertyPage() {
                                     <FormField control={form.control} name="cashContributors" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Contributors</FormLabel>
-                                            <FormControl><Textarea placeholder="e.g., John Doe - 500,000 AED, Jane Doe - 500,000 AED" {...field} /></FormControl>
+                                            <FormControl><Textarea placeholder="e.g., John Doe - 50,000 AED, Jane Doe - 50,000 AED" {...field} /></FormControl>
                                             <p className="text-xs text-muted-foreground">If paid by multiple people, note down each person and their contribution.</p>
                                             <FormMessage />
                                         </FormItem>
@@ -267,7 +260,7 @@ export default function EditPropertyPage() {
 
                             <div className="flex justify-end gap-2 pt-4">
                                 <Button variant="outline" asChild>
-                                    <Link href={`/property/${propertyId}`}>Cancel</Link>
+                                    <Link href={`/investments/${propertyId}`}>Cancel</Link>
                                 </Button>
                                 <Button type="submit">Save Changes</Button>
                             </div>

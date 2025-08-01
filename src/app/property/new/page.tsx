@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Info, PlusCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -24,10 +24,9 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
-    name: z.string().min(1, "Property name is required."),
-    location: z.string().min(1, "Location is required."),
-    totalValue: z.coerce.number().min(1, "Total price is required."),
-    downPayment: z.coerce.number().min(0),
+    name: z.string().min(1, "Investment name is required."),
+    totalValue: z.coerce.number().min(1, "Total value is required."),
+    downPayment: z.coerce.number().min(0, "Initial investment is required"),
     paymentType: z.enum(['mortgage', 'cash', 'installment']),
     loanAmount: z.coerce.number().optional(),
     installmentAmount: z.coerce.number().optional(),
@@ -39,7 +38,7 @@ const formSchema = z.object({
 });
 
 
-export default function NewPropertyPage() {
+export default function NewInvestmentPage() {
     const router = useRouter();
     const { toast } = useToast();
 
@@ -47,7 +46,6 @@ export default function NewPropertyPage() {
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: "",
-            location: "",
             totalValue: 0,
             downPayment: 0,
             paymentType: 'mortgage',
@@ -65,6 +63,7 @@ export default function NewPropertyPage() {
     const onSubmit = (values: z.infer<typeof formSchema>) => {
         const newPropertyData = {
             ...values,
+            location: '', // No longer used
             loanAmount: values.loanAmount || 0,
             installmentAmount: values.installmentAmount || 0,
             paymentsMade: values.downPayment,
@@ -77,53 +76,40 @@ export default function NewPropertyPage() {
         };
         const newProperty = addProperty(newPropertyData);
         toast({
-            title: "Property Added",
+            title: "Investment Added",
             description: `"${newProperty.name}" has been successfully added.`,
         });
-        router.push(`/property/${newProperty.id}`);
+        router.push(`/investments/${newProperty.id}`);
     };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <div className="mb-8">
-                 <Link href="/property" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                 <Link href="/investments" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
                     <ChevronLeft className="w-4 h-4" />
-                    <span>Back to Properties</span>
+                    <span>Back to Investments</span>
                 </Link>
             </div>
             <Card className="max-w-3xl mx-auto">
                 <CardHeader>
-                    <CardTitle className="font-headline">Add New Property</CardTitle>
-                    <CardDescription>Enter the details of your new property asset.</CardDescription>
+                    <CardTitle className="font-headline">Add New Investment</CardTitle>
+                    <CardDescription>Enter the details of your new investment asset.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                            {/* Property Details */}
+                            {/* Investment Details */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-foreground">Property Details</h3>
+                                <h3 className="text-lg font-semibold text-foreground">Investment Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
                                         control={form.control}
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Property Name</FormLabel>
+                                                <FormLabel>Investment Name</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="e.g., Marina View Apartment" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="location"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Location</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="e.g., Dubai, UAE" {...field} />
+                                                    <Input placeholder="e.g., Startup Funding" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -141,9 +127,9 @@ export default function NewPropertyPage() {
                                         name="totalValue"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Total Price (AED)</FormLabel>
+                                                <FormLabel>Total Value (AED)</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="1,200,000" {...field} />
+                                                    <Input type="number" placeholder="100,000" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -154,9 +140,9 @@ export default function NewPropertyPage() {
                                         name="downPayment"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Amount Paid / Down Payment (AED)</FormLabel>
+                                                <FormLabel>Initial Investment (AED)</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="240,000" {...field} />
+                                                    <Input type="number" placeholder="25,000" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -177,7 +163,7 @@ export default function NewPropertyPage() {
                                                 <PopoverTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="w-5 h-5"><Info className="w-4 h-4 text-muted-foreground"/></Button>
                                                 </PopoverTrigger>
-                                                <PopoverContent className="text-sm">Select how this property was financed.</PopoverContent>
+                                                <PopoverContent className="text-sm">Select how this investment was financed.</PopoverContent>
                                             </Popover>
                                         </div>
                                         <FormControl>
@@ -185,7 +171,7 @@ export default function NewPropertyPage() {
                                                 <FormItem>
                                                     <FormControl>
                                                         <Label htmlFor="r-mortgage" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                                                            <RadioGroupItem value="mortgage" id="r-mortgage" /> Mortgage / Loan
+                                                            <RadioGroupItem value="mortgage" id="r-mortgage" /> Loan
                                                         </Label>
                                                     </FormControl>
                                                 </FormItem>
@@ -213,19 +199,19 @@ export default function NewPropertyPage() {
                             {/* Conditional Fields */}
                             {paymentType === 'mortgage' && (
                                 <div className="space-y-4 p-4 border rounded-md bg-muted/50">
-                                    <h4 className="font-semibold">Mortgage Details</h4>
+                                    <h4 className="font-semibold">Loan Details</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={form.control} name="loanAmount" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Loan Amount (AED)</FormLabel>
-                                                <FormControl><Input type="number" placeholder="960,000" {...field} /></FormControl>
+                                                <FormControl><Input type="number" placeholder="75,000" {...field} /></FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}/>
                                         <FormField control={form.control} name="installmentAmount" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Monthly Installment (AED)</FormLabel>
-                                                <FormControl><Input type="number" placeholder="5,500" {...field} /></FormControl>
+                                                <FormControl><Input type="number" placeholder="2,500" {...field} /></FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}/>
@@ -239,7 +225,7 @@ export default function NewPropertyPage() {
                                     <FormField control={form.control} name="cashContributors" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Contributors</FormLabel>
-                                            <FormControl><Textarea placeholder="e.g., John Doe - 500,000 AED, Jane Doe - 500,000 AED" {...field} /></FormControl>
+                                            <FormControl><Textarea placeholder="e.g., John Doe - 50,000 AED, Jane Doe - 50,000 AED" {...field} /></FormControl>
                                             <p className="text-xs text-muted-foreground">If paid by multiple people, note down each person and their contribution.</p>
                                             <FormMessage />
                                         </FormItem>
@@ -279,9 +265,9 @@ export default function NewPropertyPage() {
 
                             <div className="flex justify-end gap-2 pt-4">
                                 <Button variant="outline" asChild>
-                                    <Link href="/property">Cancel</Link>
+                                    <Link href="/investments">Cancel</Link>
                                 </Button>
-                                <Button type="submit">Add Property</Button>
+                                <Button type="submit">Add Investment</Button>
                             </div>
                         </form>
                     </Form>
