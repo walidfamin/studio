@@ -40,19 +40,22 @@ export default function AccountDetailPage() {
 
     const processData = (data: any[][]) => {
         try {
-            // Remove header row
+            // Remove header row by slicing from the first index
             const rows = data.slice(1);
             
             const newTransactions: Transaction[] = rows.map((row, index) => {
+                // The original row number in the file is index + 2 (since index is 0-based and we sliced off the header)
+                const originalRowNumber = index + 2;
+
                 if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) {
-                    console.warn(`Skipping empty or invalid row ${index + 2}:`, row);
+                    console.warn(`Skipping empty or invalid row ${originalRowNumber}:`, row);
                     return null;
                 }
 
                 const [dateStr, description, crDr, amountStr] = row;
                 
-                if (!dateStr || !description || !crDr || !amountStr) {
-                    throw new Error(`Invalid data on row ${index + 2}: Each row must have at least 4 values. Found: ${row.join(', ')}`);
+                if (!dateStr || !description || crDr === undefined || crDr === null || amountStr === undefined || amountStr === null) {
+                    throw new Error(`Invalid data on row ${originalRowNumber}: Each row must have at least 4 values. Found: ${row.join(', ')}`);
                 }
 
                 let date;
@@ -65,12 +68,12 @@ export default function AccountDetailPage() {
                 }
 
                 if (isNaN(date.getTime())) {
-                    throw new Error(`Invalid date on row ${index + 2}: '${dateStr}'`);
+                    throw new Error(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
                 }
 
                 const amount = parseFloat(amountStr);
                 if (isNaN(amount)) {
-                    throw new Error(`Invalid amount on row ${index + 2}: '${amountStr}' is not a valid number.`);
+                    throw new Error(`Invalid amount on row ${originalRowNumber}: '${amountStr}' is not a valid number.`);
                 }
                 
                 return {
