@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
+import { format, parseISO } from 'date-fns';
 
 
 function parseFlexibleDate(dateStr: string | number): Date {
@@ -262,20 +263,25 @@ export default function AccountDetailPage() {
         setCustomCategory('');
     }
 
-    const chartData = transactions
-        .filter(t => t.category !== 'Uncategorized')
-        .reduce((acc, t) => {
-            const month = new Date(t.date).toLocaleString('default', { month: 'short' });
-            if (!acc[month]) {
-                acc[month] = { name: month, income: 0, expense: 0 };
-            }
-            if (t.type === 'income') {
-                acc[month].income += t.amount;
-            } else {
-                acc[month].expense += t.amount;
-            }
-            return acc;
-        }, {} as Record<string, {name: string, income: number, expense: number}>);
+    const chartData = useMemo(() => {
+        const monthlyData: Record<string, {name: string, income: number, expense: number}> = {};
+
+        transactions
+            .filter(t => t.category !== 'Uncategorized' && t.category !== 'Credit Card Payment')
+            .forEach(t => {
+                const month = format(parseISO(t.date), 'MMM');
+                if (!monthlyData[month]) {
+                    monthlyData[month] = { name: month, income: 0, expense: 0 };
+                }
+                if (t.type === 'income') {
+                    monthlyData[month].income += t.amount;
+                } else {
+                    monthlyData[month].expense += t.amount;
+                }
+            });
+
+        return Object.values(monthlyData);
+    }, [transactions]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -316,9 +322,9 @@ export default function AccountDetailPage() {
                 <CardDescription>Income vs Expenses for categorized transactions.</CardDescription>
             </CardHeader>
             <CardContent>
-                {Object.values(chartData).length > 0 ? (
+                {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={240}>
-                         <ComposedChart data={Object.values(chartData)}>
+                         <ComposedChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis />
@@ -349,7 +355,7 @@ export default function AccountDetailPage() {
                                      <div>
                                         <p className="font-medium">{t.description}</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {new Date(t.date).toLocaleDateString()} - <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.category === 'Uncategorized' ? 'bg-gray-200 text-gray-800' : 'bg-blue-100 text-blue-800'}`}>{t.category}</span>
+                                            {new Date(t.date).toLocaleDateString()} - <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.category === 'Uncategorized' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>{t.category}</span>
                                         </p>
                                     </div>
                                 </div>
@@ -420,5 +426,3 @@ export default function AccountDetailPage() {
     </div>
   )
 }
-
-    

@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@/components/ui/button';
 import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { ChevronDown } from 'lucide-react';
 
 type Period = 'weekly' | 'monthly' | 'yearly';
@@ -32,7 +32,7 @@ const filterTransactionsByPeriod = (transactions: Transaction[], period: Period)
     }
     
     return transactions.filter(t => {
-        const transactionDate = new Date(t.date);
+        const transactionDate = parseISO(t.date);
         return isWithinInterval(transactionDate, interval);
     });
 };
@@ -45,7 +45,7 @@ export function SpendingByCategory({ transactions }: { transactions: Transaction
         const filteredTransactions = filterTransactionsByPeriod(transactions, period);
         
         const spending = filteredTransactions
-            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized')
+            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized' && t.category !== 'Credit Card Payment')
             .reduce((acc, t) => {
                 if (!acc[t.category]) {
                     acc[t.category] = 0;

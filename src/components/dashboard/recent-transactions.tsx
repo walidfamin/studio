@@ -52,15 +52,15 @@ export function RecentTransactions() {
             {transactions.slice(0, 5).map((transaction) => (
               <TableRow key={transaction.id}>
                 <TableCell>
-                  <div className="flex items-center gap-3">
+                  <Link href={`/accounts/${transaction.accountId}`} className="flex items-center gap-3 group">
                     <div className="p-2 bg-muted rounded-full">
                        {transaction.type === 'income' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownLeft className="w-4 h-4 text-red-500" />}
                     </div>
                     <div>
-                        <div className="font-medium">{transaction.description}</div>
+                        <div className="font-medium group-hover:underline">{transaction.description}</div>
                         <div className="text-sm text-muted-foreground md:hidden">{format(new Date(transaction.date), 'PP')}</div>
                     </div>
-                  </div>
+                  </Link>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                    <Badge className="text-xs" variant={transaction.type === 'income' ? 'default' : 'secondary'}>
