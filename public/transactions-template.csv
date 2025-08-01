@@ -1,6 +1,12 @@
-date,description,amount,type,category
-2024-01-15,Salary,5000,income,Salary
-2024-01-16,Groceries,75.50,expense,Food
-2024-01-17,Gas Bill,45.25,expense,Utilities
-2024-01-18,Freelance Project,300,income,Freelance
-2024-01-20,Dinner Out,55,expense,Food
+Transaction Date,Description,Cr/Dr,Amount in AED
+31/07/2025,"PAYMENT RECEIVED, THANK YOU",CR,35065.25
+30/07/2025,www.bayut.com Dubai,DR,4410.0
+30/07/2025,Amazon.ae Dubai,DR,1115.55
+30/07/2025,SMART NTS GOVT TRAXN C DUBAI,DR,682.41
+29/07/2025,"LOVABLE LOVABLE.DEV - 50.0 USD",DR,191.28
+29/07/2025,"TWILIO INC TWILIO.COM - 20.0 USD",DR,76.51
+29/07/2025,"BOLT.EUD2507291432 Tallinn - 9.93 EUR",DR,44.73
+29/07/2025,N T S BUSINESS HUB LLC DUBAI,DR,1284.7
+29/07/2025,Dubai Insurance Compan DUBAI,DR,144.38
+29/07/2025,N T S BUSINESS HUB LLC DUBAI,DR,76.14
+28/07/2025,"Jump park, Mojs Mojs - 28.0 EUR",DR,125.99

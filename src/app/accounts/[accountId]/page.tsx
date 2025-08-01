@@ -47,9 +47,9 @@ export default function AccountDetailPage() {
                     const lines = text.split('\n').slice(1); // Skip header row
                     const newTransactions: Transaction[] = lines.map((line, index) => {
                         if (!line.trim()) return null; // Skip empty lines
-                        const [date, description, amountStr, type, category] = line.split(',');
-                        if (!date || !description || !amountStr || !type || !category) {
-                            throw new Error(`Invalid data on line ${index + 2}: Each row must have 5 values.`);
+                        const [date, description, crDr, amountStr] = line.split(',');
+                         if (!date || !description || !crDr || !amountStr) {
+                            throw new Error(`Invalid data on line ${index + 2}: Each row must have 4 values.`);
                         }
                         const amount = parseFloat(amountStr);
                         if (isNaN(amount)) {
@@ -60,8 +60,8 @@ export default function AccountDetailPage() {
                             date: new Date(date.trim()).toISOString(),
                             description: description.trim(),
                             amount: amount,
-                            type: type.trim() as 'income' | 'expense',
-                            category: category.trim(),
+                            type: crDr.trim().toUpperCase() === 'CR' ? 'income' : 'expense',
+                            category: 'Uncategorized',
                             accountId: accountId,
                         };
                     }).filter((t): t is Transaction => t !== null); // Filter out empty lines
