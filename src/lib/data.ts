@@ -78,16 +78,26 @@ export const spendingData = [
 ];
 
 export const categorySpending = [
-  { category: 'Groceries', value: 450, fill: 'hsl(var(--chart-1))' },
-  { category: 'Shopping', value: 300, fill: 'hsl(var(--chart-2))' },
-  { category: 'Transportation', value: 200, fill: 'hsl(var(--chart-3))' },
-  { category: 'Entertainment', value: 150, fill: 'hsl(var(--chart-4))' },
-  { category: 'Food & Drink', value: 250, fill: 'hsl(var(--chart-5))' },
+  { category: 'Rent/Mortgage', value: 1000, fill: 'hsl(var(--chart-1))' },
+  { category: 'Groceries', value: 465, fill: 'hsl(var(--chart-3))' },
+  { category: 'Electric', value: 85, fill: 'hsl(var(--chart-2))' },
+  { category: 'Transportation', value: 70, fill: 'hsl(var(--chart-4))' },
+  { category: 'Phone', value: 70, fill: 'hsl(var(--chart-5))' },
+  { category: 'TV', value: 5, fill: 'hsl(var(--muted))' },
 ]
 
 export const accounts: Account[] = [
-    { id: 'acc_1', name: 'Checking', balance: 4850.75, type: 'bank' },
-    { id: 'acc_2', name: 'Savings', balance: 12345.67, type: 'bank' },
-    { id: 'acc_3', name: 'Primary Credit', balance: -2750.00, type: 'credit' },
-    { id: 'acc_4', name: 'Brokerage', balance: 7500.00, type: 'investment' },
+    { id: 'acc_1', name: 'Checking Account', balance: 3475.00, type: 'budget' },
+    { id: 'acc_2', name: 'Savings Account', balance: 4700.00, type: 'budget' },
+    { id: 'acc_3', name: 'Credit Card', balance: -3300.00, type: 'budget', negative: true },
+
+    { id: 'loan_1', name: 'Mortgage', balance: -260000.00, type: 'loan', negative: true },
+    { id: 'loan_2', name: 'Prius Loan', balance: -13500.00, type: 'loan', negative: true },
+    { id: 'loan_3', name: 'Jeep Loan', balance: -18700.00, type: 'loan', negative: true },
+    { id: 'loan_4', name: 'T\'s Student Loans', balance: -7800.00, type: 'loan', negative: true },
+    { id: 'loan_5', name: 'M\'s Student Loans', balance: -17400.00, type: 'loan', negative: true },
+
+    { id: 'track_1', name: 'T\'s Retirement Account', balance: 22000.00, type: 'tracking' },
+    { id: 'track_2', name: 'M\'s 401K', balance: 12577.00, type: 'tracking' },
+    { id: 'track_3', name: 'Home Value', balance: 350000.00, type: 'tracking' },
 ];

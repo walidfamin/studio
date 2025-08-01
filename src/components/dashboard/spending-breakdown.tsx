@@ -1,6 +1,6 @@
 'use client';
 
-import { Pie, PieChart, Cell } from 'recharts';
+import { Pie, PieChart, Cell, Tooltip } from 'recharts';
 import {
   Card,
   CardContent,
@@ -15,7 +15,6 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { categorySpending } from '@/lib/data';
-import { Badge } from '../ui/badge';
 import React from 'react';
 
 const chartConfig = {
@@ -23,7 +22,7 @@ const chartConfig = {
     label: 'Spending',
   },
   ...categorySpending.reduce((acc, cur) => {
-    acc[cur.category.toLowerCase().replace(/ & /g, '_')] = { label: cur.category, color: cur.fill };
+    acc[cur.category.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_')] = { label: cur.category, color: cur.fill };
     return acc;
   }, {} as ChartConfig)
 } satisfies ChartConfig;
@@ -35,22 +34,35 @@ export function SpendingBreakdown() {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="font-headline">Spending by Category</CardTitle>
-        <CardDescription>July 2024</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 flex items-center justify-center pb-0">
-          <ChartContainer config={chartConfig} className="min-h-[250px] w-full max-w-[250px]">
+      <CardContent className="flex-1 flex items-center justify-center pb-0 pt-6">
+          <ChartContainer config={chartConfig} className="min-h-[300px] w-full max-w-[300px]">
             <PieChart accessibilityLayer>
+              <Tooltip 
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    hideLabel
+                    formatter={(value, name, props) => {
+                      return (
+                        <div className='flex flex-col items-center'>
+                          <span className='text-muted-foreground'>{props.payload.category}</span>
+                          <span className='font-bold'>${value.toLocaleString()}</span>
+                        </div>
+                      )
+                    }}
+                  />
+                } 
+              />
               <Pie
                 data={categorySpending}
                 dataKey="value"
                 nameKey="category"
-                innerRadius={60}
+                innerRadius={80}
+                outerRadius={120}
                 strokeWidth={5}
               >
                  {categorySpending.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell key={`cell-${index}`} fill={entry.fill} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" />
                   ))}
               </Pie>
             </PieChart>
@@ -58,14 +70,10 @@ export function SpendingBreakdown() {
       </CardContent>
        <CardFooter className="flex-col gap-2 text-sm">
         <div className="flex items-center justify-center gap-1 font-medium leading-none">
-            Total spent: ${totalValue.toLocaleString()}
+            Monthly
         </div>
-        <div className="leading-none text-muted-foreground flex flex-wrap justify-center gap-1">
-          {categorySpending.map(item => (
-            <Badge key={item.category} variant="outline" style={{borderColor: item.fill}}>
-                {item.category}
-            </Badge>
-          ))}
+        <div className="leading-none text-2xl font-bold">
+            ${totalValue.toLocaleString()}
         </div>
       </CardFooter>
     </Card>

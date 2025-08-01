@@ -11,5 +11,6 @@ export type Account = {
   id: string;
   name: string;
   balance: number;
-  type: 'bank' | 'credit' | 'investment';
+  type: 'budget' | 'loan' | 'tracking';
+  negative?: boolean;
 }
