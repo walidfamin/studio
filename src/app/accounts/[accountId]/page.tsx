@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { accounts, transactions as initialTransactions } from "@/lib/data";
 import { Download, Upload, Edit } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useParams } from "next/navigation";
 import { Transaction, Account } from "@/lib/types";
@@ -56,7 +57,8 @@ export default function AccountDetailPage() {
     const params = useParams();
     const accountId = params.accountId as string;
     
-    const [account, setAccount] = useState<Account | undefined>(accounts.find(a => a.id === accountId));
+    const accountDetails = useMemo(() => accounts.find(a => a.id === accountId), [accountId]);
+    
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -69,20 +71,19 @@ export default function AccountDetailPage() {
         }
     }, [accountId]);
     
-    useEffect(() => {
-        const balance = transactions.reduce((acc, t) => {
+    const accountBalance = useMemo(() => {
+        return transactions.reduce((acc, t) => {
             if (t.type === 'income') return acc + t.amount;
             if (t.type === 'expense') return acc - t.amount;
             return acc;
         }, 0);
-        setAccount(prev => prev ? { ...prev, balance } : undefined);
     }, [transactions]);
 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
-    if (!account) {
+    if (!accountDetails) {
         return <div className="p-8">Account not found.</div>
     }
 
@@ -124,7 +125,7 @@ export default function AccountDetailPage() {
                 let type: 'income' | 'expense' = 'expense';
                 let category = 'Uncategorized';
                 
-                if (account?.type === 'Credit Card') {
+                if (accountDetails?.type === 'Credit Card') {
                     if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received, thank')) {
                         type = 'income';
                         category = 'Credit Card Payment';
@@ -280,8 +281,8 @@ export default function AccountDetailPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="flex items-center justify-between mb-8">
         <div>
-            <h1 className="text-3xl font-bold font-headline">{account.name}</h1>
-            <p className="text-lg text-muted-foreground">{account.bank}</p>
+            <h1 className="text-3xl font-bold font-headline">{accountDetails.name}</h1>
+            <p className="text-lg text-muted-foreground">{accountDetails.bank}</p>
         </div>
         <div className="flex items-center gap-2">
             <input 
@@ -306,7 +307,7 @@ export default function AccountDetailPage() {
                 <CardTitle>Current Balance</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-4xl font-bold">{formatCurrency(account.balance)}</p>
+                <p className="text-4xl font-bold">{formatCurrency(accountBalance)}</p>
             </CardContent>
         </Card>
          <Card className="col-span-2">
@@ -419,3 +420,5 @@ export default function AccountDetailPage() {
     </div>
   )
 }
+
+    
