@@ -70,15 +70,13 @@ export default function AccountDetailPage() {
     }, [accountId]);
     
     useEffect(() => {
-        if (account) {
-            const balance = transactions.reduce((acc, t) => {
-                if (t.type === 'income') return acc + t.amount;
-                if (t.type === 'expense') return acc - t.amount;
-                return acc;
-            }, 0);
-            setAccount(prev => prev ? { ...prev, balance } : undefined);
-        }
-    }, [transactions, account]);
+        const balance = transactions.reduce((acc, t) => {
+            if (t.type === 'income') return acc + t.amount;
+            if (t.type === 'expense') return acc - t.amount;
+            return acc;
+        }, 0);
+        setAccount(prev => prev ? { ...prev, balance } : undefined);
+    }, [transactions]);
 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
