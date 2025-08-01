@@ -26,6 +26,11 @@ export function AccountOverview() {
     return sum + balance;
   }, 0);
 
+  const getLogoUrl = (bank: string) => {
+    const domain = bank.toLowerCase() === 'rak bank' ? 'rakbank.ae' : `${bank.split(' ')[0].toLowerCase()}.com`;
+    return `https://logo.clearbit.com/${domain}`;
+  }
+
   return (
     <Card className="md:col-span-2">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -56,7 +61,7 @@ export function AccountOverview() {
                  <Link href={`/accounts/${account.id}`} key={account.id} className="flex items-center justify-between hover:bg-muted/50 p-2 rounded-md">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                            <Image src={`https://logo.clearbit.com/${account.bank.split(' ')[0].toLowerCase()}.com`} alt={account.bank} width={20} height={20} className="rounded-full" onError={(e) => e.currentTarget.style.display = 'none'} />
+                            <Image src={getLogoUrl(account.bank)} alt={account.bank} width={20} height={20} className="rounded-full" onError={(e) => e.currentTarget.style.display = 'none'} />
                         </div>
                         <p className="text-sm font-medium">{account.name}</p>
                     </div>

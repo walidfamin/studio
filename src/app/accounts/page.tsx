@@ -67,11 +67,16 @@ function AccountRow({ account }: { account: Account }) {
         });
     }, [account.id]);
 
+    const getLogoUrl = (bank: string) => {
+        const domain = bank.toLowerCase() === 'rak bank' ? 'rakbank.ae' : `${bank.split(' ')[0].toLowerCase()}.com`;
+        return `https://logo.clearbit.com/${domain}`;
+    }
+
     return (
          <Link href={`/accounts/${account.id}`} className="block">
             <div className="flex items-center py-4 hover:bg-muted/50 px-6">
                 <div className="w-10 h-10 bg-muted rounded-full mr-4 flex items-center justify-center">
-                    <Image src={`https://logo.clearbit.com/${account.bank.split(' ')[0].toLowerCase()}.com`} alt={account.bank} width={24} height={24} className="rounded-full" onError={(e) => e.currentTarget.style.display = 'none'} />
+                    <Image src={getLogoUrl(account.bank)} alt={account.bank} width={24} height={24} className="rounded-full" onError={(e) => e.currentTarget.style.display = 'none'} />
                 </div>
                 <div className="flex-1">
                     <p className="font-medium">{account.name}</p>
