@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Pie, PieChart, Cell, Tooltip } from 'recharts';
@@ -79,3 +80,4 @@ export function SpendingBreakdown() {
     </Card>
   );
 }
+
