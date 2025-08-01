@@ -5,12 +5,13 @@ export type Transaction = {
   amount: number;
   type: 'income' | 'expense';
   category: string;
+  accountId: string;
 };
 
 export type Account = {
   id: string;
   name: string;
   balance: number;
-  type: 'budget' | 'loan' | 'tracking';
-  negative?: boolean;
-}
+  type: 'Credit Card' | 'Saving Account' | 'Current Account' | 'E Saving Account';
+  bank: string;
+};

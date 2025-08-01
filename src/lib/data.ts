@@ -8,6 +8,7 @@ export const transactions: Transaction[] = [
     amount: 5.75,
     type: 'expense',
     category: 'Food & Drink',
+    accountId: 'adcb_current'
   },
   {
     id: 'txn_2',
@@ -16,6 +17,7 @@ export const transactions: Transaction[] = [
     amount: 2500,
     type: 'income',
     category: 'Salary',
+    accountId: 'adcb_current'
   },
   {
     id: 'txn_3',
@@ -24,6 +26,7 @@ export const transactions: Transaction[] = [
     amount: 78.50,
     type: 'expense',
     category: 'Shopping',
+    accountId: 'adcb_credit'
   },
   {
     id: 'txn_4',
@@ -32,6 +35,7 @@ export const transactions: Transaction[] = [
     amount: 500,
     type: 'expense',
     category: 'Investments',
+    accountId: 'adcb_saving'
   },
   {
     id: 'txn_5',
@@ -40,6 +44,7 @@ export const transactions: Transaction[] = [
     amount: 124.30,
     type: 'expense',
     category: 'Groceries',
+    accountId: 'adcb_current'
   },
     {
     id: 'txn_6',
@@ -48,6 +53,7 @@ export const transactions: Transaction[] = [
     amount: 22.10,
     type: 'expense',
     category: 'Transportation',
+    accountId: 'fab_current'
   },
     {
     id: 'txn_7',
@@ -56,6 +62,7 @@ export const transactions: Transaction[] = [
     amount: 2500,
     type: 'income',
     category: 'Salary',
+    accountId: 'rak_current'
   },
     {
     id: 'txn_8',
@@ -64,6 +71,7 @@ export const transactions: Transaction[] = [
     amount: 15.99,
     type: 'expense',
     category: 'Entertainment',
+    accountId: 'adcb_credit'
   },
 ];
 
@@ -87,17 +95,15 @@ export const categorySpending = [
 ]
 
 export const accounts: Account[] = [
-    { id: 'acc_1', name: 'Checking Account', balance: 3475.00, type: 'budget' },
-    { id: 'acc_2', name: 'Savings Account', balance: 4700.00, type: 'budget' },
-    { id: 'acc_3', name: 'Credit Card', balance: -3300.00, type: 'budget', negative: true },
+    // ADCB Accounts
+    { id: 'adcb_credit', name: 'Credit Card', balance: -3300.00, type: 'Credit Card', bank: 'ADCB' },
+    { id: 'adcb_saving', name: 'Saving Account', balance: 4700.00, type: 'Saving Account', bank: 'ADCB' },
+    { id: 'adcb_current', name: 'Current Account', balance: 3475.00, type: 'Current Account', bank: 'ADCB' },
+    { id: 'adcb_esaving', name: 'E Saving Account', balance: 12500.00, type: 'E Saving Account', bank: 'ADCB' },
 
-    { id: 'loan_1', name: 'Mortgage', balance: -260000.00, type: 'loan', negative: true },
-    { id: 'loan_2', name: 'Prius Loan', balance: -13500.00, type: 'loan', negative: true },
-    { id: 'loan_3', name: 'Jeep Loan', balance: -18700.00, type: 'loan', negative: true },
-    { id: 'loan_4', name: 'T\'s Student Loans', balance: -7800.00, type: 'loan', negative: true },
-    { id: 'loan_5', name: 'M\'s Student Loans', balance: -17400.00, type: 'loan', negative: true },
+    // FAB BANK Accounts
+    { id: 'fab_current', name: 'Current Account', balance: 8250.00, type: 'Current Account', bank: 'FAB BANK' },
 
-    { id: 'track_1', name: 'T\'s Retirement Account', balance: 22000.00, type: 'tracking' },
-    { id: 'track_2', name: 'M\'s 401K', balance: 12577.00, type: 'tracking' },
-    { id: 'track_3', name: 'Home Value', balance: 350000.00, type: 'tracking' },
+    // RAK BANK Accounts
+    { id: 'rak_current', name: 'Current Account', balance: 1500.00, type: 'Current Account', bank: 'RAK BANK' },
 ];
