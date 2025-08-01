@@ -39,8 +39,10 @@ export const properties: Property[] = [
     {
         id: 'prop1',
         name: 'Downtown Apartment',
+        location: 'Dubai, UAE',
         totalValue: 1200000,
         downPayment: 240000,
+        paymentType: 'mortgage',
         loanAmount: 960000,
         installmentAmount: 5500,
         nextInstallmentDate: '2024-08-01T00:00:00.000Z',

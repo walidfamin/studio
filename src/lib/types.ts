@@ -16,11 +16,19 @@ export type Account = {
   bank: string;
 };
 
+export type Contributor = {
+  name: string;
+  amount: number;
+};
+
 export type Property = {
   id: string;
   name: string;
+  location: string;
   totalValue: number;
   downPayment: number;
+  paymentType: 'mortgage' | 'cash';
+  cashContributors?: Contributor[];
   loanAmount: number;
   installmentAmount: number;
   nextInstallmentDate: string;
