@@ -11,8 +11,8 @@ import { Progress } from '@/components/ui/progress';
 import { CreditCard } from 'lucide-react';
 
 export function CreditCardUsage() {
-  const limit = 10000;
-  const spent = 2750;
+  const limit = 35200;
+  const spent = 5715.92;
   const progressValue = (spent / limit) * 100;
 
   return (
