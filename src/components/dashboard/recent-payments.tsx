@@ -88,7 +88,7 @@ export function RecentPayments() {
                 <TableCell>{payment.type}</TableCell>
                 <TableCell><Badge variant={getStatusBadgeVariant(payment.status)}>{payment.status}</Badge></TableCell>
                 <TableCell>{payment.date}</TableCell>
-                <TableCell className="text-right font-medium">{payment.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</TableCell>
+                <TableCell className="text-right font-medium">{payment.amount.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -97,4 +97,3 @@ export function RecentPayments() {
     </Card>
   );
 }
-

@@ -69,7 +69,7 @@ export function MonthlyProfits() {
             </PieChart>
           </ChartContainer>
           <div className="flex items-center justify-center text-2xl font-bold mt-[-3.5rem] mb-4">
-            {totalValue.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            {totalValue.toLocaleString('en-AE', { style: 'currency', currency: 'AED', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </div>
       </CardContent>
        <CardFooter className="flex-col gap-2 text-sm">
@@ -77,7 +77,7 @@ export function MonthlyProfits() {
             {chartData.map(item => (
                 <div key={item.source} className="text-center">
                     <p className="text-muted-foreground flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }}></span>{item.source}</p>
-                    <p className="font-bold">{item.profit.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                    <p className="font-bold">{item.profit.toLocaleString('en-AE', { style: 'currency', currency: 'AED', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                 </div>
             ))}
         </div>

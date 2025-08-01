@@ -62,7 +62,7 @@ export function SavingsChart() {
                 content={<ChartTooltipContent formatter={(value: number, name, props) => (
                     <div className="flex flex-col">
                         <span>{props.payload.month}</span>
-                        <span className="font-bold">{value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>
+                        <span className="font-bold">{value.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</span>
                     </div>
                 )} hideLabel />}
               />

@@ -46,7 +46,7 @@ export function MostPayments() {
                 <div key={item.category}>
                     <div className="flex justify-between mb-1 text-sm">
                         <span className="font-medium">{item.category}</span>
-                        <span className="text-muted-foreground">{item.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>
+                        <span className="text-muted-foreground">{item.amount.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</span>
                     </div>
                     <Progress value={item.progress} />
                 </div>

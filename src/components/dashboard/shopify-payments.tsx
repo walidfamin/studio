@@ -59,7 +59,7 @@ export function ShopifyPayments() {
               <TableRow key={payment.month}>
                 <TableCell>{payment.month}</TableCell>
                 <TableCell className="text-muted-foreground">{payment.date}</TableCell>
-                <TableCell className="text-right font-medium">{payment.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</TableCell>
+                <TableCell className="text-right font-medium">{payment.amount.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</TableCell>
               </TableRow>
             ))}
           </TableBody>

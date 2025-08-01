@@ -30,14 +30,15 @@ const accountGroups: Record<string, { title: string, accounts: Account[] }> = {
 };
 
 allAccounts.forEach(account => {
-    if (account.type === 'budget' && !account.negative) {
-        accountGroups.cash.accounts.push(account);
-    } else if (account.type === 'budget' && account.negative) {
-        accountGroups.credit.accounts.push(account);
-    } else if (account.type === 'tracking' && (account.name.includes('Retirement') || account.name.includes('401K'))) {
-        accountGroups.investment.accounts.push(account);
-    } else if (account.type === 'loan') {
-        accountGroups.loan.accounts.push(account);
+    switch (account.type) {
+        case 'Current Account':
+        case 'E Saving Account':
+        case 'Saving Account':
+            accountGroups.cash.accounts.push(account);
+            break;
+        case 'Credit Card':
+             accountGroups.credit.accounts.push(account);
+            break;
     }
 });
 
@@ -60,11 +61,11 @@ function AccountRow({ account }: { account: Account }) {
     return (
         <div className="flex items-center py-4">
             <div className="w-10 h-10 bg-muted rounded-full mr-4 flex items-center justify-center">
-                 <Image src={`https://logo.clearbit.com/${account.name.split(' ')[0].toLowerCase()}.com`} alt={account.name} width={24} height={24} className="rounded-full" onError={(e) => e.currentTarget.style.display = 'none'} />
+                 <Image src={`https://logo.clearbit.com/${account.bank.split(' ')[0].toLowerCase()}.com`} alt={account.bank} width={24} height={24} className="rounded-full" onError={(e) => e.currentTarget.style.display = 'none'} />
             </div>
             <div className="flex-1">
                 <p className="font-medium">{account.name}</p>
-                <p className="text-sm text-muted-foreground">{account.type === 'budget' ? (account.negative ? 'Credit Card' : 'Checking') : 'Investment'}</p>
+                <p className="text-sm text-muted-foreground">{account.type}</p>
             </div>
             <div className="w-20 h-8 mr-4">
                  <ResponsiveContainer width="100%" height="100%">
@@ -108,6 +109,8 @@ function AccountGroup({ title, accounts, change, changePercent }: { title: strin
 
 export default function AccountsPage() {
     const netWorth = allAccounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const totalAssets = allAccounts.filter(a => a.balance > 0).reduce((sum, acc) => sum + acc.balance, 0);
+    const totalLiabilities = allAccounts.filter(a => a.balance < 0).reduce((sum, acc) => sum + acc.balance, 0);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -130,7 +133,7 @@ export default function AccountsPage() {
                                     <CardTitle className="text-4xl font-bold">{netWorth.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</CardTitle>
                                     <div className="flex items-center text-green-500">
                                         <ArrowUp className="w-4 h-4"/>
-                                        <span>AED 4,622.51 (0.7%) This month</span>
+                                        <span>{(4622.51).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} (0.7%) This month</span>
                                     </div>
                                 </div>
                             </div>
@@ -196,28 +199,25 @@ export default function AccountsPage() {
                         <div>
                             <h3 className="text-lg font-semibold mb-2">Assets</h3>
                             <ul className="space-y-2 text-sm">
-                                <li className="flex justify-between"><span>Investments</span><span>{ (541718.23).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
-                                <li className="flex justify-between"><span>Real Estate</span><span>{ (350000.00).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
-                                <li className="flex justify-between"><span>Cash</span><span>{ (66006.01).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
-                                <li className="flex justify-between"><span>Vehicles</span><span>{ (0).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
-                            </ul>
+                                <li className="flex justify-between"><span>Cash</span><span>{accountGroups.cash.accounts.reduce((s,a)=>s+a.balance, 0).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</span></li>
+                                <li className="flex justify-between"><span>Investments</span><span>{ accountGroups.investment.accounts.reduce((s,a)=>s+a.balance, 0).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
+                             </ul>
                             <Separator className="my-4" />
                             <div className="flex justify-between font-bold">
                                 <span>Total Assets</span>
-                                <span>{ (957724.24).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span>
+                                <span>{ totalAssets.toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span>
                             </div>
                         </div>
                         <Separator className="my-4"/>
                         <div>
                             <h3 className="text-lg font-semibold mb-2">Liabilities</h3>
                              <ul className="space-y-2 text-sm">
-                                <li className="flex justify-between"><span>Loans</span><span>{ (270350.06).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
-                                <li className="flex justify-between"><span>Credit Cards</span><span>{ (2076.53).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
+                                <li className="flex justify-between"><span>Credit Cards</span><span>{ accountGroups.credit.accounts.reduce((s,a)=>s+a.balance, 0).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span></li>
                             </ul>
                             <Separator className="my-4" />
                             <div className="flex justify-between font-bold">
                                 <span>Total Liabilities</span>
-                                <span>{ (272426.59).toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span>
+                                <span>{ totalLiabilities.toLocaleString('en-AE', { style: 'currency', currency: 'AED' }) }</span>
                             </div>
                         </div>
                     </CardContent>
