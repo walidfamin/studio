@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -17,6 +19,7 @@ import {
   Legend,
   Line,
   ComposedChart,
+  LineChart,
 } from "recharts"
 
 const accountGroups: Record<string, { title: string, accounts: Account[] }> = {
