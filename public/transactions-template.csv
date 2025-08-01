@@ -1,5 +1,6 @@
 date,description,amount,type,category
-2024-07-25,Groceries,55.00,expense,Food
-2024-07-25,Salary,2000.00,income,Paycheck
-2024-07-24,Coffee,4.50,expense,Food
-2024-07-23,New Shoes,120.00,expense,Shopping
+2024-01-15,Salary,5000,income,Salary
+2024-01-16,Groceries,75.50,expense,Food
+2024-01-17,Gas Bill,45.25,expense,Utilities
+2024-01-18,Freelance Project,300,income,Freelance
+2024-01-20,Dinner Out,55,expense,Food

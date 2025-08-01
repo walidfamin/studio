@@ -123,7 +123,7 @@ export default function AccountDetailPage() {
             <Button variant="outline" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4"/> Import</Button>
             <Button variant="outline" asChild>
                 <Link href="/transactions-template.csv" download>
-                    <Download className="mr-2 h-4 w-4"/> Export
+                    <Download className="mr-2 h-4 w-4"/> Download Template
                 </Link>
             </Button>
         </div>
@@ -162,6 +162,7 @@ export default function AccountDetailPage() {
                                 <div>
                                     <p className="font-medium">{t.description}</p>
                                     <p className="text-sm text-muted-foreground">{new Date(t.date).toLocaleDateString()}</p>
+
                                 </div>
                                 <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
                                     {formatCurrency(t.type === 'expense' ? -t.amount : t.amount)}
