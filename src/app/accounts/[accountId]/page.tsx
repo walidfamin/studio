@@ -124,9 +124,11 @@ export default function AccountDetailPage() {
                 const descriptionStr = String(description).trim();
                 const type = String(crDr).trim().toUpperCase() === 'CR' ? 'income' : 'expense';
                 let category = 'Uncategorized';
-
-                if (type === 'income' || descriptionStr.toLowerCase().includes('payment received, thank')) {
-                    category = 'Credit Card Payment';
+                
+                if (account?.type === 'Credit Card') {
+                    if (type === 'income' || descriptionStr.toLowerCase().includes('payment received, thank')) {
+                        category = 'Credit Card Payment';
+                    }
                 }
 
                 return {
