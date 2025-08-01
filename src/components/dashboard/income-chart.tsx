@@ -51,7 +51,7 @@ export function IncomeChart() {
                     <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${Number(value) / 1000}k`} />
                     <Tooltip 
                         cursor={{fill: 'hsla(var(--primary), 0.1)'}}
-                        content={<ChartTooltipContent formatter={(value) => value.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} />} 
+                        content={<ChartTooltipContent formatter={(value) => Number(value).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} />} 
                     />
                     <Bar dataKey="income" radius={[4, 4, 0, 0]}>
                         {chartData.map((entry, index) => (

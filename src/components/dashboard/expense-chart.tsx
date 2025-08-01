@@ -52,7 +52,7 @@ export function ExpenseChart() {
                     <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${Number(value) / 1000}k`} />
                     <Tooltip 
                         cursor={{fill: 'hsla(var(--primary), 0.1)'}}
-                        content={<ChartTooltipContent formatter={(value) => value.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} />} 
+                        content={<ChartTooltipContent formatter={(value) => Number(value).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} />} 
                     />
                     <Bar dataKey="thisMonth" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="lastMonth" fill="hsl(var(--primary), 0.3)" radius={[4, 4, 0, 0]} />

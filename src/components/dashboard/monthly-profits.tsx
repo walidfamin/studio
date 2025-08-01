@@ -52,7 +52,7 @@ export function MonthlyProfits() {
             <PieChart accessibilityLayer>
               <Tooltip 
                 cursor={false}
-                content={<ChartTooltipContent hideLabel />} 
+                content={<ChartTooltipContent hideLabel formatter={(value) => Number(value).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })} />} 
               />
               <Pie
                 data={chartData}
