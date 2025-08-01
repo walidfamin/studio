@@ -44,18 +44,26 @@ export default function AccountDetailPage() {
             const rows = data.slice(1);
             
             const newTransactions: Transaction[] = rows.map((row, index) => {
-                if (!row || row.length < 4) {
-                    console.warn(`Skipping invalid row ${index + 2}:`, row);
+                if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) {
+                    console.warn(`Skipping empty or invalid row ${index + 2}:`, row);
                     return null;
                 }
 
                 const [dateStr, description, crDr, amountStr] = row;
                 
                 if (!dateStr || !description || !crDr || !amountStr) {
-                    throw new Error(`Invalid data on row ${index + 2}: Each row must have at least 4 values.`);
+                    throw new Error(`Invalid data on row ${index + 2}: Each row must have at least 4 values. Found: ${row.join(', ')}`);
                 }
 
-                const date = typeof dateStr === 'number' ? new Date(Date.UTC(0,0, dateStr -1)) : new Date(dateStr);
+                let date;
+                if (typeof dateStr === 'number') {
+                    // Handle Excel's serial date number
+                    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+                    date = new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
+                } else {
+                    date = new Date(dateStr);
+                }
+
                 if (isNaN(date.getTime())) {
                     throw new Error(`Invalid date on row ${index + 2}: '${dateStr}'`);
                 }
@@ -68,9 +76,9 @@ export default function AccountDetailPage() {
                 return {
                     id: `imported_${Date.now()}_${index}`,
                     date: date.toISOString(),
-                    description: description.trim(),
+                    description: String(description).trim(),
                     amount: amount,
-                    type: crDr.trim().toUpperCase() === 'CR' ? 'income' : 'expense',
+                    type: String(crDr).trim().toUpperCase() === 'CR' ? 'income' : 'expense',
                     category: 'Uncategorized',
                     accountId: accountId,
                 };
@@ -85,7 +93,7 @@ export default function AccountDetailPage() {
                 return;
             }
 
-            setTransactions(prev => [...newTransactions, ...prev]);
+            setTransactions(prev => [...newTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
             toast({
                 title: "Import Successful",
                 description: `${newTransactions.length} transaction(s) have been imported.`,
@@ -111,12 +119,13 @@ export default function AccountDetailPage() {
         const reader = new FileReader();
 
         if (file.name.endsWith('.csv')) {
-            reader.onload = (e) => {
+             reader.onload = (e) => {
                 const text = e.target?.result as string;
-                // Simple CSV parsing
-                const lines = text.split('\n');
-                const data = lines.map(line => line.split(',').map(item => item.trim()));
-                processData(data);
+                const workbook = XLSX.read(text, { type: 'string' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                processData(json as any[][]);
             };
             reader.readAsText(file);
         } else if (file.name.endsWith('.xlsx')) {
