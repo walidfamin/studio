@@ -12,6 +12,7 @@ import { CreditCardUsage } from '@/components/dashboard/credit-card-usage';
 import { AccountOverview } from '@/components/dashboard/overview';
 
 import { Input } from '@/components/ui/input';
+import { InvestmentOverview } from '@/components/dashboard/investment-overview';
 
 
 export default function DashboardPage() {
@@ -47,9 +48,12 @@ export default function DashboardPage() {
             </div>
             <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <AccountOverview />
-                <div className="space-y-6">
-                  <IncomeTracker />
-                  <CreditCardUsage />
+                <InvestmentOverview />
+                <div className="md:col-span-2 space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <IncomeTracker />
+                    <CreditCardUsage />
+                  </div>
                 </div>
             </div>
              <div className="lg:col-span-1">
