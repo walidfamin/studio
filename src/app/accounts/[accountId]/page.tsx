@@ -70,26 +70,30 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     }, [accountId]);
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
-        let balance = 0;
+        if (transactions.length === 0) {
+            return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
+        }
+
+        // Sort transactions by date ascending to correctly calculate balances
+        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const startBalance = sortedTransactions[0].balance ?? 0;
+        const endBalance = sortedTransactions[sortedTransactions.length - 1].balance ?? 0;
+
         let inflow = 0;
         let outflow = 0;
 
-        transactions.forEach(t => {
+        sortedTransactions.forEach(t => {
             if (t.type === 'income') {
-                balance += t.amount;
                 inflow += t.amount;
             } else if (t.type === 'expense') {
-                balance -= t.amount;
                 outflow += t.amount;
             }
         });
-        
-        // This is a simplification and assumes the balance from transactions reflects the account's state.
-        // For a more accurate starting balance, it would likely need to be set manually or from a different data source.
-        const startBalance = balance + outflow - inflow;
 
-        return { accountBalance: balance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
+        return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
+
 
     if (!accountDetails) {
         return <div className="p-8">Account not found.</div>
@@ -187,13 +191,14 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
     const processStandardStatement = (data: any[][], importId: string) => {
          const headers = data[0].map(h => String(h).trim());
-         const dateIndex = headers.indexOf('Posting Date');
+         const dateIndex = headers.indexOf('Value Date');
          const descIndex = headers.indexOf('Description');
          const debitIndex = headers.indexOf('Debit Amount');
          const creditIndex = headers.indexOf('Credit Amount');
+         const balanceIndex = headers.indexOf('Balance');
 
-        if (dateIndex === -1 || descIndex === -1 || debitIndex === -1 || creditIndex === -1) {
-            throw new Error("Invalid file headers. Expected 'Posting Date', 'Description', 'Debit Amount', 'Credit Amount'.");
+        if (dateIndex === -1 || descIndex === -1 || debitIndex === -1 || creditIndex === -1 || balanceIndex === -1) {
+            throw new Error("Invalid file headers. Expected 'Value Date', 'Description', 'Debit Amount', 'Credit Amount', 'Balance'.");
         }
 
         const rows = data.slice(1);
@@ -205,6 +210,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             const description = row[descIndex];
             const debit = row[debitIndex];
             const credit = row[creditIndex];
+            const balance = row[balanceIndex];
 
             if (!dateStr || !description) return null;
 
@@ -216,8 +222,9 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
             const debitAmount = debit ? parseFloat(String(debit).replace(/,/g, '')) : 0;
             const creditAmount = credit ? parseFloat(String(credit).replace(/,/g, '')) : 0;
+            const balanceAmount = balance ? parseFloat(String(balance).replace(/,/g, '')) : 0;
             
-            if (isNaN(debitAmount) || isNaN(creditAmount)) {
+            if (isNaN(debitAmount) || isNaN(creditAmount) || isNaN(balanceAmount)) {
                 console.warn(`Invalid amount on row ${originalRowNumber}.`);
                 return null;
             }
@@ -234,6 +241,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 category: 'Uncategorized',
                 accountId: accountId,
                 importId: importId,
+                balance: balanceAmount,
             } as Transaction;
         }).filter((t): t is Transaction => t !== null);
         

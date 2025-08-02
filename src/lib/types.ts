@@ -1,4 +1,5 @@
 
+
 export type Transaction = {
   id: string;
   date: string;
@@ -8,6 +9,7 @@ export type Transaction = {
   category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment' | 'Transfer';
   accountId: string;
   importId?: string; // To track which import a transaction came from
+  balance?: number; // Running balance from the statement
 };
 
 export type Account = {
