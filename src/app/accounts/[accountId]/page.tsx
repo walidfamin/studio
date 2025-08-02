@@ -4,12 +4,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { accounts, transactions as initialTransactions, categorySpending } from "@/lib/data";
-import { Download, Upload, Edit, Home, ShoppingCart, Zap, Car, Phone, Tv, CircleCheck, BadgeCheck } from "lucide-react";
+import { accounts, transactions as initialTransactions } from "@/lib/data";
+import { Download, Upload, Edit } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, use, startTransition } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useParams } from "next/navigation";
 import { Transaction, Account } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import * as XLSX from 'xlsx';
@@ -17,52 +16,46 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { format, parse, isValid, startOfDay } from 'date-fns';
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TransactionTable } from "@/components/transactions/transaction-table";
-import { categorizeTransaction } from "@/ai/flows/categorize-transaction-flow";
 
-
-function parseFlexibleDate(dateStr: string | number): Date | null {
-    if (typeof dateStr === 'number') {
-        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-        return new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
-    }
-    
-    if (typeof dateStr === 'string') {
-        const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'dd-MMM-yy', 'MM/dd/yyyy'];
-        for (const fmt of formats) {
-            const parsedDate = parse(dateStr, fmt, new Date());
-            if (isValid(parsedDate)) {
-                return parsedDate;
-            }
+function parseFlexibleDate(dateString: string | number): Date | null {
+  if (typeof dateString === 'number' && dateString > 0) {
+    const excelEpoch = new Date(1899, 11, 30);
+    return new Date(excelEpoch.getTime() + dateString * 86400000);
+  }
+  
+  if (typeof dateString === 'string') {
+    const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'dd-MMM-yy', 'MM/dd/yyyy'];
+    for (const fmt of formats) {
+        const parsedDate = parse(dateString, fmt, new Date());
+        if (isValid(parsedDate)) {
+            return parsedDate;
         }
     }
-    
-    // Fallback for ISO strings or other standard formats
-    const fallbackDate = new Date(dateStr);
-    if (isValid(fallbackDate)) {
-        return fallbackDate;
-    }
+  }
+  
+  const fallbackDate = new Date(dateString);
+  if (isValid(fallbackDate)) {
+      return fallbackDate;
+  }
 
-    return null;
+  return null;
 }
 
 
-export default function AccountDetailPage() {
-    const params = useParams();
-    const accountId = params.accountId as string;
+export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
     
-    const accountDetails = useMemo(() => accounts.find(a => a.id === accountId), [accountId]);
+    const { accountId } = use(params);
+    const [accountDetails] = useState<Account | undefined>(accounts.find(a => a.id === accountId));
     
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<string>('');
+    const [selectedCategory, setSelectedCategory] = useState<Transaction['category'] | 'Other' | 'Transfer'>('');
     const [customCategory, setCustomCategory] = useState<string>('');
+    const [transferToAccount, setTransferToAccount] = useState<string>('');
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
-    const [lastPaidDate, setLastPaidDate] = useState<Date | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -74,22 +67,8 @@ export default function AccountDetailPage() {
         }
     }, [accountId]);
     
-    const { accountBalance, totalUsage, totalPayments } = useMemo(() => {
+    const { accountBalance } = useMemo(() => {
         let balance = 0;
-        let usage = 0;
-        let payments = 0;
-        
-        const isCreditCard = accountDetails?.type === 'Credit Card';
-        const creditLimit = 35200;
-
-        if (isCreditCard) {
-            balance = -creditLimit;
-        }
-
-        const cycleTransactions = lastPaidDate 
-            ? transactions.filter(t => new Date(t.date) >= lastPaidDate)
-            : transactions;
-
         transactions.forEach(t => {
             if (t.type === 'income') {
                 balance += t.amount;
@@ -97,62 +76,24 @@ export default function AccountDetailPage() {
                 balance -= t.amount;
             }
         });
-        
-        cycleTransactions.forEach(t => {
-             if (t.type === 'income') {
-                payments += t.amount;
-            } else if (t.type === 'expense') {
-                usage += t.amount;
-            }
-        });
-
-        return { accountBalance: balance, totalUsage: usage, totalPayments: payments };
-    }, [transactions, lastPaidDate, accountDetails]);
-
-
-    const spendingByCategoryChartData = useMemo(() => {
-        const spending = transactions
-            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized')
-            .reduce((acc, t) => {
-                if (!acc[t.category]) {
-                    acc[t.category] = { value: 0, fill: `hsl(var(--chart-${(Object.keys(acc).length % 5) + 1}))` };
-                }
-                acc[t.category].value += t.amount;
-                return acc;
-            }, {} as Record<string, { value: number, fill: string }>);
-
-        return Object.entries(spending)
-            .map(([category, data]) => ({ name: category, ...data }))
-            .sort((a, b) => b.value - a.value);
+        return { accountBalance: balance };
     }, [transactions]);
-
-    const totalSpending = useMemo(() => {
-        return spendingByCategoryChartData.reduce((acc, item) => acc + item.value, 0);
-    }, [spendingByCategoryChartData]);
 
     if (!accountDetails) {
         return <div className="p-8">Account not found.</div>
     }
 
-    const handleMarkAsPaid = (paymentDate: string) => {
-        const date = startOfDay(new Date(paymentDate));
-        setLastPaidDate(date);
-        toast({
-            title: "Statement Marked as Paid",
-            description: `Usage and payments will now be calculated from ${format(date, 'PPP')}.`,
-        });
-    };
-
     const handleImportClick = () => {
         fileInputRef.current?.click();
     };
 
-    const processData = async (data: any[][]) => {
+    const processData = (data: any[][]) => {
+        const importId = `import_${Date.now()}`;
         try {
             if (accountDetails.type === 'Credit Card') {
-                await processCreditCardStatement(data);
+                processCreditCardStatement(data, importId);
             } else {
-                await processStandardStatement(data);
+                processStandardStatement(data, importId);
             }
         } catch (error: any) {
              console.error("Import failed:", error);
@@ -168,10 +109,10 @@ export default function AccountDetailPage() {
         }
     };
 
-    const processCreditCardStatement = async (data: any[][]) => {
+    const processCreditCardStatement = (data: any[][], importId: string) => {
         const rows = data.slice(1);
         
-        const newTransactions: Transaction[] = await Promise.all(rows.map(async (row, index) => {
+        const newTransactions = rows.map((row, index) => {
             const originalRowNumber = index + 2;
 
             if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) return null;
@@ -179,54 +120,60 @@ export default function AccountDetailPage() {
             const [dateStr, description, crDr, amountStr] = row;
             
             if (!dateStr || !description || crDr === undefined || crDr === null || amountStr === undefined || amountStr === null) {
-                throw new Error(`Invalid data on row ${originalRowNumber}: Each row must have at least 4 values. Found: ${row.join(', ')}`);
+                console.warn(`Skipping row ${originalRowNumber} due to missing data:`, row);
+                return null;
             }
 
-            const date = parseFlexibleDate(dateStr);
-            if (!date) throw new Error(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
+            const date = parseFlexibleDate(String(dateStr));
+            if (!date) {
+                console.warn(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
+                return null;
+            }
 
             const amount = parseFloat(String(amountStr).replace(/,/g, ''));
-            if (isNaN(amount)) throw new Error(`Invalid amount on row ${originalRowNumber}: '${amountStr}'`);
+            if (isNaN(amount)) {
+                console.warn(`Invalid amount on row ${originalRowNumber}: '${amountStr}'`);
+                return null;
+            }
             
             const descriptionStr = String(description).trim();
             const typeRaw = String(crDr).trim().toUpperCase();
             let type: 'income' | 'expense' = 'expense';
             let category: Transaction['category'] = 'Uncategorized';
             
-            if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received, thank')) {
+            if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received')) {
                 type = 'income';
                 category = 'Credit Card Payment';
             } else {
                 type = 'expense';
             }
 
-            if(category === 'Uncategorized') {
-                category = await categorizeTransaction({ description: descriptionStr });
-            }
-
             return {
-                id: `imported_${Date.now()}_${index}`,
+                id: `tx_${Date.now()}_${index}`,
                 date: date.toISOString(),
                 description: descriptionStr,
                 amount: amount,
                 type: type,
                 category: category,
                 accountId: accountId,
+                importId: importId,
             };
-        }));
+        }).filter((t): t is Transaction => t !== null);
 
-        const validTransactions = newTransactions.filter((t): t is Transaction => t !== null);
-
-        if (validTransactions.length === 0) {
+        if (newTransactions.length === 0) {
             toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
             return;
         }
 
-        setTransactions(prev => [...validTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        toast({ title: "Import Successful", description: `${validTransactions.length} transaction(s) have been imported.` });
+        setTransactions(prev => {
+            const nonImported = prev.filter(t => t.importId !== importId);
+            const updatedTransactions = [...nonImported, ...newTransactions];
+            return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        });
+        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
     };
 
-    const processStandardStatement = async (data: any[][]) => {
+    const processStandardStatement = (data: any[][], importId: string) => {
          const headers = data[0].map(h => String(h).trim());
          const dateIndex = headers.indexOf('Posting Date');
          const descIndex = headers.indexOf('Description');
@@ -238,9 +185,8 @@ export default function AccountDetailPage() {
         }
 
         const rows = data.slice(1);
-        const newTransactions: Transaction[] = await Promise.all(rows.map(async (row, index) => {
+        const newTransactions = rows.map((row, index) => {
             const originalRowNumber = index + 2;
-
             if (!row || row.every(cell => cell === null || cell === "")) return null;
 
             const dateStr = row[dateIndex];
@@ -251,43 +197,47 @@ export default function AccountDetailPage() {
             if (!dateStr || !description) return null;
 
             const date = parseFlexibleDate(dateStr);
-            if (!date) throw new Error(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
+            if (!date) {
+                 console.warn(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
+                 return null;
+            }
 
             const debitAmount = debit ? parseFloat(String(debit).replace(/,/g, '')) : 0;
             const creditAmount = credit ? parseFloat(String(credit).replace(/,/g, '')) : 0;
             
-            if (isNaN(debitAmount) || isNaN(creditAmount)) throw new Error(`Invalid amount on row ${originalRowNumber}.`);
+            if (isNaN(debitAmount) || isNaN(creditAmount)) {
+                console.warn(`Invalid amount on row ${originalRowNumber}.`);
+                return null;
+            }
 
             const amount = debitAmount || creditAmount;
             const type = debitAmount > 0 ? 'expense' : 'income';
             
-            const descriptionStr = String(description).trim();
-            let category: Transaction['category'] = 'Uncategorized';
-
-            if(category === 'Uncategorized') {
-                category = await categorizeTransaction({ description: descriptionStr });
-            }
-
             return {
-                id: `imported_${Date.now()}_${index}`,
+                id: `tx_${Date.now()}_${index}`,
                 date: date.toISOString(),
-                description: descriptionStr,
+                description: String(description).trim(),
                 amount: amount,
                 type: type,
-                category: category,
+                category: 'Uncategorized',
                 accountId: accountId,
-            };
-        }));
+                importId: importId,
+            } as Transaction;
+        }).filter((t): t is Transaction => t !== null);
         
-        const validTransactions = newTransactions.filter((t): t is Transaction => t !== null);
-
-         if (validTransactions.length === 0) {
+         if (newTransactions.length === 0) {
             toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
             return;
         }
 
-        setTransactions(prev => [...validTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        toast({ title: "Import Successful", description: `${validTransactions.length} transaction(s) have been imported.` });
+        startTransition(() => {
+            setTransactions(prev => {
+                const nonImported = prev.filter(t => t.importId !== importId);
+                const updatedTransactions = [...nonImported, ...newTransactions];
+                return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            });
+        });
+        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -295,75 +245,105 @@ export default function AccountDetailPage() {
         if (!file) return;
 
         const reader = new FileReader();
-        const processFile = (data: any) => {
-            const workbook = XLSX.read(data, { type: file.name.endsWith('.csv') ? 'string' : 'array', cellDates: true });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false, dateNF:'dd/mm/yyyy' });
-            processData(json as any[][]);
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: file.name.endsWith('.csv') ? 'string' : 'binary', cellDates: true });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
+                processData(json as any[][]);
+            } catch (error) {
+                 toast({ variant: "destructive", title: "File Read Error", description: "Could not read the selected file." });
+            }
         };
-
-        if (file.name.endsWith('.csv')) {
-             reader.onload = (e) => processFile(e.target?.result);
-            reader.readAsText(file);
-        } else if (file.name.endsWith('.xlsx')) {
-            reader.onload = (e) => processFile(e.target?.result);
-            reader.readAsArrayBuffer(file);
-        } else {
-             toast({
-                variant: "destructive",
-                title: "Unsupported File Type",
-                description: "Please upload a .csv or .xlsx file.",
-            });
-        }
 
         reader.onerror = () => {
-            toast({
-                variant: "destructive",
-                title: "File Read Error",
-                description: "Could not read the selected file.",
-            });
+            toast({ variant: "destructive", title: "File Read Error", description: "Could not read the selected file." });
         };
+        
+        if (file.name.endsWith('.csv')) {
+             reader.readAsText(file);
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
     };
 
     const handleSaveCategory = () => {
         if (!editingTransaction) return;
 
-        const finalCategory = selectedCategory === 'Other' ? customCategory.trim() : selectedCategory;
-
+        let finalCategory: Transaction['category'];
+        if (selectedCategory === 'Other') {
+            finalCategory = customCategory.trim() as Transaction['category'];
+        } else if (selectedCategory === 'Transfer') {
+            finalCategory = 'Transfer';
+        } else {
+            finalCategory = selectedCategory as Transaction['category'];
+        }
+        
         if (!finalCategory) {
-            toast({
-                variant: "destructive",
-                title: "Category not selected",
-                description: "Please select or enter a category.",
-            });
+            toast({ variant: "destructive", title: "Category not selected", description: "Please select or enter a category." });
+            return;
+        }
+
+        if (finalCategory === 'Transfer' && !transferToAccount) {
+            toast({ variant: "destructive", title: "Destination account not selected", description: "Please select an account for the transfer." });
             return;
         }
 
         let updatedCount = 0;
-        setTransactions(prev => {
-            const newTransactions = prev.map(t => {
-                const isMatchingTransaction = t.id === editingTransaction.id || 
-                    (applyToAll && t.description === editingTransaction.description && t.category === 'Uncategorized');
+        let transferCreated = false;
 
-                if (isMatchingTransaction) {
-                    if (t.category !== finalCategory) {
-                        updatedCount++;
+        startTransition(() => {
+            setTransactions(prev => {
+                const newTransactions = prev.map(t => {
+                    const isMatchingTransaction = t.id === editingTransaction.id || 
+                        (applyToAll && t.description === editingTransaction.description && t.category === 'Uncategorized');
+
+                    if (isMatchingTransaction) {
+                        if (t.category !== finalCategory) {
+                            updatedCount++;
+                        }
+                        return { ...t, category: finalCategory };
                     }
-                    return { ...t, category: finalCategory as Transaction['category'] };
+                    return t;
+                });
+                
+                // Handle transfer creation
+                if (finalCategory === 'Transfer' && transferToAccount) {
+                    const transferAmount = editingTransaction.amount;
+                    const transferDescription = `Transfer from ${accountDetails.name}`;
+                    
+                    const transferTransaction: Transaction = {
+                        id: `tx_transfer_${Date.now()}`,
+                        date: editingTransaction.date,
+                        description: transferDescription,
+                        amount: transferAmount,
+                        type: 'income',
+                        category: 'Transfer',
+                        accountId: transferToAccount,
+                    };
+
+                    // Add the new transaction to the global state (or wherever it's stored)
+                    initialTransactions.push(transferTransaction);
+
+                    // Update the original transaction to be an expense
+                    const originalIndex = newTransactions.findIndex(t => t.id === editingTransaction.id);
+                    if (originalIndex !== -1) {
+                        newTransactions[originalIndex] = { ...newTransactions[originalIndex], type: 'expense' };
+                    }
+
+                    transferCreated = true;
                 }
-                return t;
+                
+                return newTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             });
-            return newTransactions;
         });
 
-        setEditingTransaction(null);
-        setSelectedCategory('');
-        setCustomCategory('');
-
+        handleCloseDialog();
         toast({
             title: "Transactions Updated",
-            description: `${updatedCount} transaction(s) have been categorized as "${finalCategory}".`,
+            description: `${updatedCount} transaction(s) have been categorized as "${finalCategory}". ${transferCreated ? 'Transfer created.' : ''}`.trim(),
         });
     };
     
@@ -371,6 +351,7 @@ export default function AccountDetailPage() {
         setEditingTransaction(transaction);
         setSelectedCategory(transaction.category);
         setCustomCategory('');
+        setTransferToAccount('');
         setApplyToAll(true);
     };
 
@@ -378,21 +359,8 @@ export default function AccountDetailPage() {
         setEditingTransaction(null);
         setSelectedCategory('');
         setCustomCategory('');
+        setTransferToAccount('');
     }
-
-    const categoryIcons: { [key: string]: React.ReactNode } = {
-        'Rent/Mortgage': <Home className="w-4 h-4" />,
-        'Groceries': <ShoppingCart className="w-4 h-4" />,
-        'Electric': <Zap className="w-4 h-4" />,
-        'Transportation': <Car className="w-4 h-4" />,
-        'Phone': <Phone className="w-4 h-4" />,
-        'TV': <Tv className="w-4 h-4" />,
-        'Food': <ShoppingCart className="w-4 h-4" />,
-        'Lifestyle': <Home className="w-4 h-4" />,
-        'Spends': <Zap className="w-4 h-4" />,
-        'Investment': <Zap className="w-4 h-4" />,
-        'Salary': <Zap className="w-4 h-4" />,
-    };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -418,8 +386,8 @@ export default function AccountDetailPage() {
         </div>
       </header>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
             <CardHeader>
                 <CardTitle>Current Balance</CardTitle>
             </CardHeader>
@@ -427,103 +395,10 @@ export default function AccountDetailPage() {
                 <p className="text-4xl font-bold">{formatCurrency(accountBalance)}</p>
             </CardContent>
         </Card>
-        {accountDetails.type === 'Credit Card' && (
-            <>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Total Usage</CardTitle>
-                        {lastPaidDate && <CardDescription>Since {format(lastPaidDate, 'PPP')}</CardDescription>}
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-4xl font-bold">{formatCurrency(totalUsage)}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Total Payments</CardTitle>
-                         {lastPaidDate && <CardDescription>Since {format(lastPaidDate, 'PPP')}</CardDescription>}
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-4xl font-bold">{formatCurrency(totalPayments)}</p>
-                    </CardContent>
-                </Card>
-            </>
-        )}
-
-        <Card className="col-span-full">
-            <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                     <div className="md:col-span-2">
-                        {spendingByCategoryChartData.length > 0 ? (
-                            <div className="relative w-full h-[350px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                        <Pie
-                                            data={spendingByCategoryChartData}
-                                            cx="50%"
-                                            cy="50%"
-                                            labelLine={false}
-                                            innerRadius={80}
-                                            outerRadius={120}
-                                            fill="#8884d8"
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                        >
-                                            {spendingByCategoryChartData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                                            ))}
-                                        </Pie>
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <p className="text-sm text-muted-foreground">Monthly</p>
-                                    <p className="text-2xl font-bold">{formatCurrency(totalSpending)}</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="h-[350px] bg-muted rounded-md flex items-center justify-center">
-                                <p className="text-muted-foreground">Categorize expense transactions to see the chart</p>
-                            </div>
-                        )}
-                    </div>
-                    <div className="md:col-span-1 space-y-4">
-                        <div>
-                            <p className="text-sm text-muted-foreground">TOTAL SPENDING</p>
-                            <p className="text-2xl font-bold">{formatCurrency(totalSpending)}</p>
-                            <p className="text-xs text-muted-foreground">For this time period</p>
-                        </div>
-                        <Separator />
-                        <div>
-                            <p className="text-sm text-muted-foreground">AVERAGE SPENDING</p>
-                            <p className="text-2xl font-bold">{formatCurrency(totalSpending)}</p>
-                            <p className="text-xs text-muted-foreground">Per month</p>
-                        </div>
-                        <Separator />
-                        <div>
-                             <h4 className="text-sm font-semibold mb-2">CATEGORIES</h4>
-                             <ul className="space-y-2">
-                                {spendingByCategoryChartData.map((item) => (
-                                    <li key={item.name} className="flex items-center justify-between text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
-                                            <span className="text-muted-foreground">{categoryIcons[item.name]}</span>
-                                            <span>{item.name}</span>
-                                        </div>
-                                        <span className="font-medium">{formatCurrency(item.value)}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-
-
+      
         <Card className="col-span-full">
             <CardHeader>
-                <CardTitle>Recent Transactions</CardTitle>
+                <CardTitle>All Transactions</CardTitle>
             </CardHeader>
             <CardContent>
                  <TransactionTable transactions={transactions} onEdit={handleEditClick} />
@@ -542,19 +417,21 @@ export default function AccountDetailPage() {
                 <div className="py-4 space-y-4">
                     <div>
                         <Label htmlFor="category">Category</Label>
-                        <Select onValueChange={setSelectedCategory} defaultValue={selectedCategory}>
+                        <Select onValueChange={(value) => setSelectedCategory(value as any)} defaultValue={selectedCategory}>
                             <SelectTrigger id="category">
                                 <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Lifestyle">Lifestyle</SelectItem>
-                                <SelectItem value="Investment">Investment</SelectItem>
-                                <SelectItem value="Spends">Spends</SelectItem>
                                 <SelectItem value="Food">Food</SelectItem>
-                                <SelectItem value="Transport">Transportation</SelectItem>
-                                <SelectItem value="Groceries">Groceries</SelectItem>
+                                <SelectItem value="Transport">Transport</SelectItem>
+                                <SelectItem value="Spends">Spends</SelectItem>
+                                <SelectItem value="Investment">Investment</SelectItem>
+                                <SelectItem value="Lifestyle">Lifestyle</SelectItem>
                                 <SelectItem value="Salary">Salary</SelectItem>
                                 <SelectItem value="Rent/Mortgage">Rent/Mortgage</SelectItem>
+                                <SelectItem value="Groceries">Groceries</SelectItem>
+                                <SelectItem value="Credit Card Payment">Credit Card Payment</SelectItem>
+                                <SelectItem value="Transfer">Transfer</SelectItem>
                                 <SelectItem value="Other">Other (Custom)</SelectItem>
                             </SelectContent>
                         </Select>
@@ -564,10 +441,25 @@ export default function AccountDetailPage() {
                             <Label htmlFor="custom-category">Custom Category</Label>
                             <Input 
                                 id="custom-category" 
-                                placeholder="Enter your custom tag"
+                                placeholder="Enter your custom category"
                                 value={customCategory}
                                 onChange={(e) => setCustomCategory(e.target.value)}
                             />
+                        </div>
+                    )}
+                     {selectedCategory === 'Transfer' && (
+                        <div>
+                            <Label htmlFor="transfer-account">Transfer to Account</Label>
+                            <Select onValueChange={setTransferToAccount} defaultValue={transferToAccount}>
+                                <SelectTrigger id="transfer-account">
+                                    <SelectValue placeholder="Select destination account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {accounts.filter(acc => acc.id !== accountId).map(acc => (
+                                        <SelectItem key={acc.id} value={acc.id}>{acc.name} - {acc.bank}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     )}
                     <div className="flex items-center space-x-2">

@@ -5,8 +5,9 @@ export type Transaction = {
   description: string;
   amount: number;
   type: 'income' | 'expense';
-  category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment';
+  category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment' | 'Transfer';
   accountId: string;
+  importId?: string; // To track which import a transaction came from
 };
 
 export type Account = {
