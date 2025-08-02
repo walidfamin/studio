@@ -34,13 +34,15 @@ import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
-import { ChevronDown, Download } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Download } from 'lucide-react';
 import { AddTransactionSheet } from '../add-transaction-sheet';
 import { Checkbox } from '../ui/checkbox';
 import * as XLSX from 'xlsx';
 
 export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: 'date', desc: true },
+  ]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
@@ -70,8 +72,18 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
     },
     {
         accessorKey: 'date',
-        header: 'Date',
-        cell: ({ row }) => <div>{format(new Date(row.getValue('date')), 'dd MMM yyyy')}</div>,
+        header: ({ column }) => {
+          return (
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            >
+              Date
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          )
+        },
+        cell: ({ row }) => <div className="pl-4">{format(new Date(row.getValue('date')), 'dd MMM yyyy')}</div>,
     },
     {
         accessorKey: 'description',
@@ -79,7 +91,18 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
     },
     {
         accessorKey: 'category',
-        header: 'Category',
+        header: ({ column }) => {
+          return (
+            <Button
+              variant="ghost"
+              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            >
+              Category
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          )
+        },
+        cell: ({ row }) => <div className="pl-4">{row.getValue("category")}</div>,
     },
     {
         accessorKey: 'type',
@@ -91,13 +114,23 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
     },
     {
         accessorKey: 'amount',
-        header: () => <div className="text-right">Amount</div>,
+        header: ({ column }) => (
+          <div className="text-right">
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            >
+                Amount
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        ),
         cell: ({ row }) => {
             const amount = parseFloat(row.getValue('amount'));
             const type = row.original.type;
             const value = type === 'expense' ? -amount : amount;
 
-            return <div className={`text-right font-medium ${value > 0 ? 'text-green-600' : ''}`}>{formatCurrency(value)}</div>
+            return <div className={`text-right font-medium pr-4 ${value > 0 ? 'text-green-600' : ''}`}>{formatCurrency(value)}</div>
         }
     },
   ];
@@ -123,12 +156,15 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
 
   const handleExport = () => {
     const selectedRows = table.getFilteredSelectedRowModel().rows;
+    if (selectedRows.length === 0) {
+        return;
+    }
     const dataToExport = selectedRows.map(row => row.original);
     
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Selected Transactions");
-    XLSX.writeFile(workbook, "selected_transactions.csv");
+    XLSX.writeFile(workbook, "selected_transactions.xlsx");
   };
   
   const selectedTotal = React.useMemo(() => {

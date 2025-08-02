@@ -32,8 +32,12 @@ const filterTransactionsByPeriod = (transactions: Transaction[], period: Period)
     }
     
     return transactions.filter(t => {
-        const transactionDate = parseISO(t.date);
-        return isWithinInterval(transactionDate, interval);
+        try {
+            const transactionDate = parseISO(t.date);
+            return isWithinInterval(transactionDate, interval);
+        } catch (e) {
+            return false;
+        }
     });
 };
 
