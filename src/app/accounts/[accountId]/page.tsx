@@ -22,6 +22,7 @@ import { format, parse, isValid, startOfDay } from 'date-fns';
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TransactionTable } from "@/components/transactions/transaction-table";
+import { categorizeTransaction } from "@/ai/flows/categorize-transaction-flow";
 
 
 function parseFlexibleDate(dateStr: string | number): Date | null {
@@ -146,12 +147,12 @@ export default function AccountDetailPage() {
         fileInputRef.current?.click();
     };
 
-    const processData = (data: any[][]) => {
+    const processData = async (data: any[][]) => {
         try {
             if (accountDetails.type === 'Credit Card') {
-                processCreditCardStatement(data);
+                await processCreditCardStatement(data);
             } else {
-                processStandardStatement(data);
+                await processStandardStatement(data);
             }
         } catch (error: any) {
              console.error("Import failed:", error);
@@ -167,10 +168,10 @@ export default function AccountDetailPage() {
         }
     };
 
-    const processCreditCardStatement = (data: any[][]) => {
+    const processCreditCardStatement = async (data: any[][]) => {
         const rows = data.slice(1);
         
-        const newTransactions: Transaction[] = rows.map((row, index) => {
+        const newTransactions: Transaction[] = await Promise.all(rows.map(async (row, index) => {
             const originalRowNumber = index + 2;
 
             if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) return null;
@@ -190,13 +191,17 @@ export default function AccountDetailPage() {
             const descriptionStr = String(description).trim();
             const typeRaw = String(crDr).trim().toUpperCase();
             let type: 'income' | 'expense' = 'expense';
-            let category = 'Uncategorized';
+            let category: Transaction['category'] = 'Uncategorized';
             
             if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received, thank')) {
                 type = 'income';
                 category = 'Credit Card Payment';
             } else {
                 type = 'expense';
+            }
+
+            if(category === 'Uncategorized') {
+                category = await categorizeTransaction({ description: descriptionStr });
             }
 
             return {
@@ -208,18 +213,20 @@ export default function AccountDetailPage() {
                 category: category,
                 accountId: accountId,
             };
-        }).filter((t): t is Transaction => t !== null);
+        }));
 
-        if (newTransactions.length === 0) {
+        const validTransactions = newTransactions.filter((t): t is Transaction => t !== null);
+
+        if (validTransactions.length === 0) {
             toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
             return;
         }
 
-        setTransactions(prev => [...newTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
+        setTransactions(prev => [...validTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        toast({ title: "Import Successful", description: `${validTransactions.length} transaction(s) have been imported.` });
     };
 
-    const processStandardStatement = (data: any[][]) => {
+    const processStandardStatement = async (data: any[][]) => {
          const headers = data[0].map(h => String(h).trim());
          const dateIndex = headers.indexOf('Posting Date');
          const descIndex = headers.indexOf('Description');
@@ -231,7 +238,7 @@ export default function AccountDetailPage() {
         }
 
         const rows = data.slice(1);
-        const newTransactions: Transaction[] = rows.map((row, index) => {
+        const newTransactions: Transaction[] = await Promise.all(rows.map(async (row, index) => {
             const originalRowNumber = index + 2;
 
             if (!row || row.every(cell => cell === null || cell === "")) return null;
@@ -253,25 +260,34 @@ export default function AccountDetailPage() {
 
             const amount = debitAmount || creditAmount;
             const type = debitAmount > 0 ? 'expense' : 'income';
+            
+            const descriptionStr = String(description).trim();
+            let category: Transaction['category'] = 'Uncategorized';
+
+            if(category === 'Uncategorized') {
+                category = await categorizeTransaction({ description: descriptionStr });
+            }
 
             return {
                 id: `imported_${Date.now()}_${index}`,
                 date: date.toISOString(),
-                description: String(description).trim(),
+                description: descriptionStr,
                 amount: amount,
                 type: type,
-                category: 'Uncategorized',
+                category: category,
                 accountId: accountId,
             };
-        }).filter((t): t is Transaction => t !== null);
+        }));
+        
+        const validTransactions = newTransactions.filter((t): t is Transaction => t !== null);
 
-         if (newTransactions.length === 0) {
+         if (validTransactions.length === 0) {
             toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
             return;
         }
 
-        setTransactions(prev => [...newTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
+        setTransactions(prev => [...validTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        toast({ title: "Import Successful", description: `${validTransactions.length} transaction(s) have been imported.` });
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -334,7 +350,7 @@ export default function AccountDetailPage() {
                     if (t.category !== finalCategory) {
                         updatedCount++;
                     }
-                    return { ...t, category: finalCategory };
+                    return { ...t, category: finalCategory as Transaction['category'] };
                 }
                 return t;
             });
@@ -510,7 +526,7 @@ export default function AccountDetailPage() {
                 <CardTitle>Recent Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-                 <TransactionTable transactions={transactions} />
+                 <TransactionTable transactions={transactions} onEdit={handleEditClick} />
             </CardContent>
         </Card>
       </div>

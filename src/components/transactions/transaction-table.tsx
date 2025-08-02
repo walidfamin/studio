@@ -34,12 +34,12 @@ import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
-import { ArrowUpDown, ChevronDown, Download } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Download, Edit } from 'lucide-react';
 import { AddTransactionSheet } from '../add-transaction-sheet';
 import { Checkbox } from '../ui/checkbox';
 import * as XLSX from 'xlsx';
 
-export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
+export function TransactionTable({ transactions, onEdit }: { transactions: Transaction[], onEdit?: (transaction: Transaction) => void }) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'date', desc: true },
   ]);
@@ -133,6 +133,14 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
             return <div className={`text-right font-medium pr-4 ${value > 0 ? 'text-green-600' : ''}`}>{formatCurrency(value)}</div>
         }
     },
+    ...(onEdit ? [{
+        id: 'actions',
+        cell: ({ row }: { row: any }) => (
+            <Button variant="ghost" size="icon" onClick={() => onEdit(row.original)}>
+                <Edit className="h-4 w-4" />
+            </Button>
+        ),
+    }] : [])
   ];
 
   const table = useReactTable({

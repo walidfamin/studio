@@ -5,7 +5,7 @@ export type Transaction = {
   description: string;
   amount: number;
   type: 'income' | 'expense';
-  category: string;
+  category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment';
   accountId: string;
 };
 
