@@ -75,7 +75,8 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         }
 
         const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+        
+        const startBalance = sortedTransactions[0].balance ?? 0;
         const endBalance = sortedTransactions[sortedTransactions.length - 1].balance ?? 0;
         
         let inflow = 0;
@@ -88,9 +89,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 outflow += t.amount;
             }
         });
-        
-        const startBalance = endBalance - inflow + outflow;
-
 
         return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
