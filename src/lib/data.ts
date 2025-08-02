@@ -1,5 +1,5 @@
 
-import type { Transaction, Account, Investment } from './types';
+import type { Transaction, Account, Property, Investment } from './types';
 
 export const transactions: Transaction[] = [];
 
@@ -36,7 +36,7 @@ export const accounts: Account[] = [
     { id: 'rak_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'RAK BANK' },
 ];
 
-export let investments: Investment[] = [
+export let properties: Investment[] = [
     {
         id: 'prop1',
         name: 'Downtown Apartment',
@@ -56,15 +56,17 @@ export let investments: Investment[] = [
     }
 ];
 
+export let investments: Investment[] = [];
+
 export function addProperty(property: Omit<Investment, 'id'>) {
     const newProperty: Investment = {
         ...property,
         id: `prop_${Date.now()}`
     };
-    investments.push(newProperty);
+    properties.push(newProperty);
     return newProperty;
 }
 
 export function updateProperty(propertyId: string, updatedProperty: Partial<Investment>) {
-    investments = investments.map(p => p.id === propertyId ? { ...p, ...updatedProperty } : p);
+    properties = properties.map(p => p.id === propertyId ? { ...p, ...updatedProperty } : p);
 }
