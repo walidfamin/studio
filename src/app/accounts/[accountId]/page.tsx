@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { accounts, transactions as initialTransactions, categorySpending } from "@/lib/data";
-import { Download, Upload, Edit, Home, ShoppingCart, Zap, Car, Phone, Tv } from "lucide-react";
+import { Download, Upload, Edit, Home, ShoppingCart, Zap, Car, Phone, Tv, CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay } from 'date-fns';
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -67,6 +67,7 @@ export default function AccountDetailPage() {
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [customCategory, setCustomCategory] = useState<string>('');
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
+    const [lastPaidDate, setLastPaidDate] = useState<Date | null>(null);
 
 
     useEffect(() => {
@@ -81,18 +82,28 @@ export default function AccountDetailPage() {
         let usage = 0;
         let payments = 0;
 
+        const cycleTransactions = lastPaidDate 
+            ? transactions.filter(t => new Date(t.date) >= lastPaidDate)
+            : transactions;
+
         transactions.forEach(t => {
             if (t.type === 'income') {
                 balance += t.amount;
-                payments += t.amount;
             } else if (t.type === 'expense') {
                 balance -= t.amount;
+            }
+        });
+        
+        cycleTransactions.forEach(t => {
+             if (t.type === 'income') {
+                payments += t.amount;
+            } else if (t.type === 'expense') {
                 usage += t.amount;
             }
         });
 
         return { accountBalance: balance, totalUsage: usage, totalPayments: payments };
-    }, [transactions]);
+    }, [transactions, lastPaidDate]);
 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +112,15 @@ export default function AccountDetailPage() {
     if (!accountDetails) {
         return <div className="p-8">Account not found.</div>
     }
+
+    const handleMarkAsPaid = () => {
+        const today = startOfDay(new Date());
+        setLastPaidDate(today);
+        toast({
+            title: "Statement Marked as Paid",
+            description: `Usage and payments will now be calculated from ${format(today, 'PPP')}.`,
+        });
+    };
 
     const handleImportClick = () => {
         fileInputRef.current?.click();
@@ -330,6 +350,11 @@ export default function AccountDetailPage() {
                 onChange={handleFileChange}
                 accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
             />
+             {accountDetails.type === 'Credit Card' && (
+                <Button variant="outline" onClick={handleMarkAsPaid}>
+                    <CircleCheck className="mr-2 h-4 w-4" /> Mark as Paid
+                </Button>
+            )}
             <Button variant="outline" onClick={handleImportClick}><Upload className="mr-2 h-4 w-4"/> Import</Button>
             <Button variant="outline" asChild>
                 <Link href="/transactions-template.csv" download>
@@ -353,6 +378,7 @@ export default function AccountDetailPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Total Usage</CardTitle>
+                        {lastPaidDate && <CardDescription>Since {format(lastPaidDate, 'PPP')}</CardDescription>}
                     </CardHeader>
                     <CardContent>
                         <p className="text-4xl font-bold">{formatCurrency(totalUsage)}</p>
@@ -361,6 +387,7 @@ export default function AccountDetailPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Total Payments</CardTitle>
+                         {lastPaidDate && <CardDescription>Since {format(lastPaidDate, 'PPP')}</CardDescription>}
                     </CardHeader>
                     <CardContent>
                         <p className="text-4xl font-bold">{formatCurrency(totalPayments)}</p>
