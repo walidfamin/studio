@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { properties } from '@/lib/data';
+import { investments } from '@/lib/data';
 import { formatCurrency } from '@/lib/utils';
 import { Landmark, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
@@ -18,11 +18,11 @@ import { Button } from '../ui/button';
 
 export function InvestmentOverview() {
   const { totalValue, totalPaid } = useMemo(() => {
-    const totalValue = properties.reduce((sum, prop) => sum + prop.totalValue, 0);
+    const totalValue = investments.reduce((sum, prop) => sum + prop.totalValue, 0);
     // downPayment is the initial investment. paymentsMade includes the downpayment initially.
-    const totalPaid = properties.reduce((sum, prop) => sum + prop.paymentsMade, 0);
+    const totalPaid = investments.reduce((sum, prop) => sum + prop.paymentsMade, 0);
     return { totalValue, totalPaid };
-  }, [properties]);
+  }, [investments]);
 
   const progressValue = totalValue > 0 ? (totalPaid / totalValue) * 100 : 0;
 
