@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -17,42 +18,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { format, parseISO, startOfDay } from 'date-fns';
+import { format, parse, isValid, startOfDay } from 'date-fns';
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TransactionTable } from "@/components/transactions/transaction-table";
 
 
-function parseFlexibleDate(dateStr: string | number): Date {
+function parseFlexibleDate(dateStr: string | number): Date | null {
     if (typeof dateStr === 'number') {
         const excelEpoch = new Date(Date.UTC(1899, 11, 30));
         return new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
     }
     
     if (typeof dateStr === 'string') {
-        if (dateStr.includes('/')) {
-            const parts = dateStr.split('/');
-            if (parts.length === 3) {
-                const day = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1;
-                let year = parseInt(parts[2], 10);
-
-                if (year < 100) {
-                    year += 2000;
-                }
-                
-                const date = new Date(Date.UTC(year, month, day));
-
-                if (date.getUTCDate() === day && date.getUTCMonth() === month && date.getUTCFullYear() === year) {
-                    return date;
-                }
+        const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'dd-MMM-yy', 'MM/dd/yyyy'];
+        for (const fmt of formats) {
+            const parsedDate = parse(dateStr, fmt, new Date());
+            if (isValid(parsedDate)) {
+                return parsedDate;
             }
         }
     }
+    
+    // Fallback for ISO strings or other standard formats
     const fallbackDate = new Date(dateStr);
-    if (!isNaN(fallbackDate.getTime())) {
+    if (isValid(fallbackDate)) {
         return fallbackDate;
     }
-    return new Date('invalid');
+
+    return null;
 }
 
 
@@ -69,6 +63,8 @@ export default function AccountDetailPage() {
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
     const [lastPaidDate, setLastPaidDate] = useState<Date | null>(null);
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         if (accountId) {
@@ -113,8 +109,25 @@ export default function AccountDetailPage() {
     }, [transactions, lastPaidDate, accountDetails]);
 
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const { toast } = useToast();
+    const spendingByCategoryChartData = useMemo(() => {
+        const spending = transactions
+            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized')
+            .reduce((acc, t) => {
+                if (!acc[t.category]) {
+                    acc[t.category] = { value: 0, fill: `hsl(var(--chart-${(Object.keys(acc).length % 5) + 1}))` };
+                }
+                acc[t.category].value += t.amount;
+                return acc;
+            }, {} as Record<string, { value: number, fill: string }>);
+
+        return Object.entries(spending)
+            .map(([category, data]) => ({ name: category, ...data }))
+            .sort((a, b) => b.value - a.value);
+    }, [transactions]);
+
+    const totalSpending = useMemo(() => {
+        return spendingByCategoryChartData.reduce((acc, item) => acc + item.value, 0);
+    }, [spendingByCategoryChartData]);
 
     if (!accountDetails) {
         return <div className="p-8">Account not found.</div>
@@ -135,77 +148,13 @@ export default function AccountDetailPage() {
 
     const processData = (data: any[][]) => {
         try {
-            const rows = data.slice(1);
-            
-            const newTransactions: Transaction[] = rows.map((row, index) => {
-                const originalRowNumber = index + 2;
-
-                if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) {
-                    console.warn(`Skipping empty or invalid row ${originalRowNumber}:`, row);
-                    return null;
-                }
-
-                const [dateStr, description, crDr, amountStr] = row;
-                
-                if (!dateStr || !description || crDr === undefined || crDr === null || amountStr === undefined || amountStr === null) {
-                    throw new Error(`Invalid data on row ${originalRowNumber}: Each row must have at least 4 values. Found: ${row.join(', ')}`);
-                }
-
-                const date = parseFlexibleDate(dateStr);
-
-                if (isNaN(date.getTime())) {
-                    throw new Error(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
-                }
-
-                const amount = parseFloat(amountStr);
-                if (isNaN(amount)) {
-                    throw new Error(`Invalid amount on row ${originalRowNumber}: '${amountStr}' is not a valid number.`);
-                }
-                
-                const descriptionStr = String(description).trim();
-                const typeRaw = String(crDr).trim().toUpperCase();
-                let type: 'income' | 'expense' = 'expense';
-                let category = 'Uncategorized';
-                
-                if (accountDetails?.type === 'Credit Card') {
-                    if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received, thank')) {
-                        type = 'income';
-                        category = 'Credit Card Payment';
-                    } else {
-                        type = 'expense';
-                    }
-                } else {
-                    type = typeRaw === 'CR' ? 'income' : 'expense';
-                }
-
-
-                return {
-                    id: `imported_${Date.now()}_${index}`,
-                    date: date.toISOString(),
-                    description: descriptionStr,
-                    amount: amount,
-                    type: type,
-                    category: category,
-                    accountId: accountId,
-                };
-            }).filter((t): t is Transaction => t !== null);
-
-            if (newTransactions.length === 0) {
-                toast({
-                    variant: "destructive",
-                    title: "Import Error",
-                    description: "The selected file is empty or does not contain valid data.",
-                });
-                return;
+            if (accountDetails.type === 'Credit Card') {
+                processCreditCardStatement(data);
+            } else {
+                processStandardStatement(data);
             }
-
-            setTransactions(prev => [...newTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-            toast({
-                title: "Import Successful",
-                description: `${newTransactions.length} transaction(s) have been imported.`,
-            });
         } catch (error: any) {
-            console.error("Import failed:", error);
+             console.error("Import failed:", error);
             toast({
                 variant: "destructive",
                 title: "Import Failed",
@@ -216,6 +165,113 @@ export default function AccountDetailPage() {
                 fileInputRef.current.value = "";
             }
         }
+    };
+
+    const processCreditCardStatement = (data: any[][]) => {
+        const rows = data.slice(1);
+        
+        const newTransactions: Transaction[] = rows.map((row, index) => {
+            const originalRowNumber = index + 2;
+
+            if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) return null;
+
+            const [dateStr, description, crDr, amountStr] = row;
+            
+            if (!dateStr || !description || crDr === undefined || crDr === null || amountStr === undefined || amountStr === null) {
+                throw new Error(`Invalid data on row ${originalRowNumber}: Each row must have at least 4 values. Found: ${row.join(', ')}`);
+            }
+
+            const date = parseFlexibleDate(dateStr);
+            if (!date) throw new Error(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
+
+            const amount = parseFloat(String(amountStr).replace(/,/g, ''));
+            if (isNaN(amount)) throw new Error(`Invalid amount on row ${originalRowNumber}: '${amountStr}'`);
+            
+            const descriptionStr = String(description).trim();
+            const typeRaw = String(crDr).trim().toUpperCase();
+            let type: 'income' | 'expense' = 'expense';
+            let category = 'Uncategorized';
+            
+            if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received, thank')) {
+                type = 'income';
+                category = 'Credit Card Payment';
+            } else {
+                type = 'expense';
+            }
+
+            return {
+                id: `imported_${Date.now()}_${index}`,
+                date: date.toISOString(),
+                description: descriptionStr,
+                amount: amount,
+                type: type,
+                category: category,
+                accountId: accountId,
+            };
+        }).filter((t): t is Transaction => t !== null);
+
+        if (newTransactions.length === 0) {
+            toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
+            return;
+        }
+
+        setTransactions(prev => [...newTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
+    };
+
+    const processStandardStatement = (data: any[][]) => {
+         const headers = data[0].map(h => String(h).trim());
+         const dateIndex = headers.indexOf('Posting Date');
+         const descIndex = headers.indexOf('Description');
+         const debitIndex = headers.indexOf('Debit Amount');
+         const creditIndex = headers.indexOf('Credit Amount');
+
+        if (dateIndex === -1 || descIndex === -1 || debitIndex === -1 || creditIndex === -1) {
+            throw new Error("Invalid file headers. Expected 'Posting Date', 'Description', 'Debit Amount', 'Credit Amount'.");
+        }
+
+        const rows = data.slice(1);
+        const newTransactions: Transaction[] = rows.map((row, index) => {
+            const originalRowNumber = index + 2;
+
+            if (!row || row.every(cell => cell === null || cell === "")) return null;
+
+            const dateStr = row[dateIndex];
+            const description = row[descIndex];
+            const debit = row[debitIndex];
+            const credit = row[creditIndex];
+
+            if (!dateStr || !description) return null;
+
+            const date = parseFlexibleDate(dateStr);
+            if (!date) throw new Error(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
+
+            const debitAmount = debit ? parseFloat(String(debit).replace(/,/g, '')) : 0;
+            const creditAmount = credit ? parseFloat(String(credit).replace(/,/g, '')) : 0;
+            
+            if (isNaN(debitAmount) || isNaN(creditAmount)) throw new Error(`Invalid amount on row ${originalRowNumber}.`);
+
+            const amount = debitAmount || creditAmount;
+            const type = debitAmount > 0 ? 'expense' : 'income';
+
+            return {
+                id: `imported_${Date.now()}_${index}`,
+                date: date.toISOString(),
+                description: String(description).trim(),
+                amount: amount,
+                type: type,
+                category: 'Uncategorized',
+                accountId: accountId,
+            };
+        }).filter((t): t is Transaction => t !== null);
+
+         if (newTransactions.length === 0) {
+            toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
+            return;
+        }
+
+        setTransactions(prev => [...newTransactions, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,26 +363,6 @@ export default function AccountDetailPage() {
         setSelectedCategory('');
         setCustomCategory('');
     }
-
-    const spendingByCategoryChartData = useMemo(() => {
-        const spending = transactions
-            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized')
-            .reduce((acc, t) => {
-                if (!acc[t.category]) {
-                    acc[t.category] = { value: 0, fill: `hsl(var(--chart-${(Object.keys(acc).length % 5) + 1}))` };
-                }
-                acc[t.category].value += t.amount;
-                return acc;
-            }, {} as Record<string, { value: number, fill: string }>);
-
-        return Object.entries(spending)
-            .map(([category, data]) => ({ name: category, ...data }))
-            .sort((a, b) => b.value - a.value);
-    }, [transactions]);
-
-    const totalSpending = useMemo(() => {
-        return spendingByCategoryChartData.reduce((acc, item) => acc + item.value, 0);
-    }, [spendingByCategoryChartData]);
 
     const categoryIcons: { [key: string]: React.ReactNode } = {
         'Rent/Mortgage': <Home className="w-4 h-4" />,
@@ -474,37 +510,7 @@ export default function AccountDetailPage() {
                 <CardTitle>Recent Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-                <ul>
-                    {transactions.length > 0 ? (
-                        transactions.map(t => (
-                            <li key={t.id} className="flex justify-between items-center py-2 border-b">
-                                <div className="flex items-center gap-4">
-                                     <div>
-                                        <p className="font-medium">{t.description}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {new Date(t.date).toLocaleDateString()} - <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.category === 'Uncategorized' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>{t.category}</span>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <p className={`font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                                        {formatCurrency(t.type === 'expense' ? -t.amount : t.amount)}
-                                    </p>
-                                    {accountDetails.type === 'Credit Card' && t.type === 'income' && (
-                                        <Button variant="outline" size="icon" onClick={() => handleMarkAsPaid(t.date)} title="Set as payment date">
-                                            <BadgeCheck className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(t)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </li>
-                        ))
-                    ) : (
-                         <li className="text-center text-muted-foreground py-4">No transactions found.</li>
-                    )}
-                </ul>
+                 <TransactionTable transactions={transactions} />
             </CardContent>
         </Card>
       </div>
@@ -568,7 +574,3 @@ export default function AccountDetailPage() {
     </div>
   )
 }
-
-    
-
-    
