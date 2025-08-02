@@ -6,7 +6,7 @@ export type Transaction = {
   description: string;
   amount: number;
   type: 'income' | 'expense';
-  category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment' | 'Transfer';
+  category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment' | 'Transfer' | 'Shopping' | 'DEWA' | 'Etisalat' | 'Du' | 'Travel' | 'Repair';
   accountId: string;
   importId?: string; // To track which import a transaction came from
   balance?: number; // Running balance from the statement

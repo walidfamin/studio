@@ -49,7 +49,7 @@ export function SpendingByCategory({ transactions }: { transactions: Transaction
         const filteredTransactions = filterTransactionsByPeriod(transactions, period);
         
         const spending = filteredTransactions
-            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized' && t.category !== 'Credit Card Payment')
+            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer')
             .reduce((acc, t) => {
                 if (!acc[t.category]) {
                     acc[t.category] = 0;

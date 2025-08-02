@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { accounts, transactions as initialTransactions } from "@/lib/data";
 import { Download, Upload } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, useEffect, useMemo, use, startTransition } from "react";
+import { useRef, useState, useEffect, useMemo, startTransition, use } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Transaction, Account } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -19,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { parse, isValid } from 'date-fns';
 import { Checkbox } from "@/components/ui/checkbox";
 import { TransactionTable } from "@/components/transactions/transaction-table";
-import { SpendingBreakdown } from "@/components/dashboard/spending-breakdown";
+import { SpendingByCategory } from "@/components/reports/spending-by-category";
+import { Progress } from "@/components/ui/progress";
 
 
 function parseFlexibleDate(dateString: string | number): Date | null {
@@ -70,7 +71,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     }, [accountId]);
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
-        if (!transactions || transactions.length === 0) {
+         if (!transactions || transactions.length === 0) {
             return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
         }
 
@@ -92,6 +93,24 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
         return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
+    
+    const creditCardLimit = 35200;
+    const { creditCardBalance, totalLifetimeSpends } = useMemo(() => {
+        if (accountDetails?.type !== 'Credit Card') {
+            return { creditCardBalance: 0, totalLifetimeSpends: 0 };
+        }
+        let balance = 0;
+        let lifetimeSpends = 0;
+        transactions.forEach(t => {
+            if (t.type === 'expense') {
+                balance += t.amount;
+                lifetimeSpends += t.amount;
+            } else if (t.type === 'income' && t.category === 'Credit Card Payment') {
+                balance -= t.amount;
+            }
+        });
+        return { creditCardBalance: balance, totalLifetimeSpends: lifetimeSpends };
+    }, [transactions, accountDetails]);
 
 
     if (!accountDetails) {
@@ -336,7 +355,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                     return t;
                 });
                 
-                // Handle transfer creation
                 if (finalCategory === 'Transfer' && transferToAccount) {
                     const transferAmount = editingTransaction.amount;
                     const transferDescription = `Transfer from ${accountDetails.name}`;
@@ -350,14 +368,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                         category: 'Transfer',
                         accountId: transferToAccount,
                     };
-
                     initialTransactions.push(transferTransaction);
-
-                    const originalIndex = newTransactions.findIndex(t => t.id === editingTransaction.id);
-                    if (originalIndex !== -1) {
-                        newTransactions[originalIndex] = { ...newTransactions[originalIndex], type: 'expense' };
-                    }
-
                     transferCreated = true;
                 }
                 
@@ -413,14 +424,31 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
       
       <div className="grid grid-cols-1 gap-6">
         {accountDetails.type === 'Credit Card' ? (
-             <Card>
-                <CardHeader>
-                    <CardTitle>Current Balance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-bold">{formatCurrency(accountBalance)}</p>
-                </CardContent>
-            </Card>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Card Usage</CardTitle>
+                        <CardDescription>Limit: {formatCurrency(creditCardLimit)}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold">{formatCurrency(creditCardBalance)}</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(creditCardLimit - creditCardBalance)} remaining</p>
+                        <Progress value={(creditCardBalance / creditCardLimit) * 100} className="mt-2"/>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Lifetime Spends</CardTitle>
+                        <CardDescription>All expenses on this card.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold">{formatCurrency(totalLifetimeSpends)}</p>
+                    </CardContent>
+                </Card>
+                <div className="col-span-1 md:col-span-2">
+                    <SpendingByCategory transactions={transactions} />
+                </div>
+            </div>
         ) : (
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card>
@@ -455,12 +483,9 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                         <p className="text-2xl font-bold text-red-500">{formatCurrency(totalOutflow)}</p>
                     </CardContent>
                 </Card>
-            </div>
-        )}
-
-        {accountDetails.type !== 'Credit Card' && (
-            <div className="lg:col-span-1">
-                 <SpendingBreakdown />
+                 <div className="lg:col-span-4">
+                    <SpendingByCategory transactions={transactions} />
+                </div>
             </div>
         )}
       
@@ -490,16 +515,30 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                                 <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Food">Food</SelectItem>
-                                <SelectItem value="Transport">Transport</SelectItem>
-                                <SelectItem value="Spends">Spends</SelectItem>
-                                <SelectItem value="Investment">Investment</SelectItem>
-                                <SelectItem value="Lifestyle">Lifestyle</SelectItem>
-                                <SelectItem value="Salary">Salary</SelectItem>
-                                <SelectItem value="Rent/Mortgage">Rent/Mortgage</SelectItem>
-                                <SelectItem value="Groceries">Groceries</SelectItem>
-                                <SelectItem value="Credit Card Payment">Credit Card Payment</SelectItem>
-                                <SelectItem value="Transfer">Transfer</SelectItem>
+                                {accountDetails?.type === 'Credit Card' ? (
+                                    <>
+                                        <SelectItem value="Shopping">Shopping</SelectItem>
+                                        <SelectItem value="Food">Food</SelectItem>
+                                        <SelectItem value="DEWA">DEWA</SelectItem>
+                                        <SelectItem value="Etisalat">Etisalat</SelectItem>
+                                        <SelectItem value="Du">Du</SelectItem>
+                                        <SelectItem value="Travel">Travel</SelectItem>
+                                        <SelectItem value="Repair">Repair</SelectItem>
+                                        <SelectItem value="Credit Card Payment">Credit Card Payment</SelectItem>
+                                    </>
+                                ) : (
+                                    <>
+                                        <SelectItem value="Food">Food</SelectItem>
+                                        <SelectItem value="Transport">Transport</SelectItem>
+                                        <SelectItem value="Spends">Spends</SelectItem>
+                                        <SelectItem value="Investment">Investment</SelectItem>
+                                        <SelectItem value="Lifestyle">Lifestyle</SelectItem>
+                                        <SelectItem value="Salary">Salary</SelectItem>
+                                        <SelectItem value="Rent/Mortgage">Rent/Mortgage</SelectItem>
+                                        <SelectItem value="Groceries">Groceries</SelectItem>
+                                        <SelectItem value="Transfer">Transfer</SelectItem>
+                                    </>
+                                )}
                                 <SelectItem value="Other">Other (Custom)</SelectItem>
                             </SelectContent>
                         </Select>

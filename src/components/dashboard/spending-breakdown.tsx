@@ -82,9 +82,21 @@ export function SpendingBreakdown() {
       }, {} as ChartConfig)
   }), [chartData]) satisfies ChartConfig;
 
-  const totalValue = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.value, 0);
-  }, [chartData]);
+  if (chartData.length === 0) {
+    return (
+        <Card className="h-full flex flex-col">
+            <CardHeader>
+                 <CardTitle className="font-headline">Spending Breakdown</CardTitle>
+                 <CardDescription>Spending for this month.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 flex items-center justify-center">
+                 <div className="h-full bg-muted rounded-md flex items-center justify-center text-center p-4 w-full">
+                    <p className="text-muted-foreground">Categorize expense transactions to see the chart.</p>
+                </div>
+            </CardContent>
+        </Card>
+    )
+  }
 
   return (
     <Card className="h-full flex flex-col">
@@ -141,9 +153,11 @@ export function SpendingBreakdown() {
                             const y = cy + radius * Math.sin(-midAngle * RADIAN);
                             const category = chartData[index].category;
 
+                            if (percent < 0.05) return null; // Don't render label if it's too small
+
                             return (
                                 <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-medium">
-                                    {category} ({(percent * 100).toFixed(0)}%)
+                                    {(percent * 100).toFixed(0)}%
                                 </text>
                             );
                         }}
