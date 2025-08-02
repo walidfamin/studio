@@ -9,7 +9,7 @@ import { properties as investments } from "@/lib/data";
 import { Investment } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { format } from 'date-fns';
-import { PlusCircle, Landmark } from "lucide-react";
+import { PlusCircle, Landmark, Edit } from "lucide-react";
 import Link from "next/link";
 
 
@@ -21,14 +21,18 @@ function InvestmentCard({ investment }: { investment: Investment }) {
         <Card>
             <CardHeader>
                 <div className="flex items-start justify-between">
-                    <div>
-                        <CardTitle className="font-headline flex items-center gap-2">
-                           <Landmark className="w-5 h-5 text-accent"/> {investment.name}
-                        </CardTitle>
+                    <div className="space-y-1">
+                        <Link href={`/investments/${investment.id}`}>
+                            <CardTitle className="font-headline flex items-center gap-2 hover:underline">
+                               <Landmark className="w-5 h-5 text-accent"/> {investment.name}
+                            </CardTitle>
+                        </Link>
                         <CardDescription>{formatCurrency(investment.totalValue)}</CardDescription>
                     </div>
                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/investments/${investment.id}`}>View Details</Link>
+                        <Link href={`/investments/${investment.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                        </Link>
                     </Button>
                 </div>
             </CardHeader>
