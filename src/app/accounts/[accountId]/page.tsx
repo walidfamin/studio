@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { accounts, transactions as initialTransactions } from "@/lib/data";
-import { Download, Upload, Edit } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useEffect, useMemo, use, startTransition } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -16,9 +16,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { format, parse, isValid, startOfDay } from 'date-fns';
+import { parse, isValid } from 'date-fns';
 import { Checkbox } from "@/components/ui/checkbox";
 import { TransactionTable } from "@/components/transactions/transaction-table";
+import { SpendingBreakdown } from "@/components/dashboard/spending-breakdown";
+
 
 function parseFlexibleDate(dateString: string | number): Date | null {
   if (typeof dateString === 'number' && dateString > 0) {
@@ -67,16 +69,42 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         }
     }, [accountId]);
     
-    const { accountBalance } = useMemo(() => {
+     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
         let balance = 0;
-        transactions.forEach(t => {
+        let inflow = 0;
+        let outflow = 0;
+        let startBalance = 0;
+
+        const sortedTransactions = [...transactions].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        if (sortedTransactions.length > 0) {
+            // Infer starting balance from the first transaction if it's a statement import
+            const firstTransaction = sortedTransactions[0];
+            if (firstTransaction.type === 'income') {
+                startBalance = firstTransaction.amount;
+            } else {
+                 //This is a simplification. A true starting balance would need to be provided or calculated differently.
+                startBalance = 0;
+            }
+        }
+
+
+        sortedTransactions.forEach(t => {
             if (t.type === 'income') {
                 balance += t.amount;
+                inflow += t.amount;
             } else if (t.type === 'expense') {
                 balance -= t.amount;
+                outflow += t.amount;
             }
         });
-        return { accountBalance: balance };
+        
+        // This is a simplification and assumes the balance from transactions reflects the account's state.
+        // For a more accurate starting balance, it would likely need to be set manually or from a different data source.
+        startBalance = balance + outflow - inflow;
+
+
+        return { accountBalance: balance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
 
     if (!accountDetails) {
@@ -86,7 +114,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const handleImportClick = () => {
         fileInputRef.current?.click();
     };
-
+    
     const processData = (data: any[][]) => {
         const importId = `import_${Date.now()}`;
         try {
@@ -324,10 +352,8 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                         accountId: transferToAccount,
                     };
 
-                    // Add the new transaction to the global state (or wherever it's stored)
                     initialTransactions.push(transferTransaction);
 
-                    // Update the original transaction to be an expense
                     const originalIndex = newTransactions.findIndex(t => t.id === editingTransaction.id);
                     if (originalIndex !== -1) {
                         newTransactions[originalIndex] = { ...newTransactions[originalIndex], type: 'expense' };
@@ -387,14 +413,57 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
       </header>
       
       <div className="grid grid-cols-1 gap-6">
-        <Card>
-            <CardHeader>
-                <CardTitle>Current Balance</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-4xl font-bold">{formatCurrency(accountBalance)}</p>
-            </CardContent>
-        </Card>
+        {accountDetails.type === 'Credit Card' ? (
+             <Card>
+                <CardHeader>
+                    <CardTitle>Current Balance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-4xl font-bold">{formatCurrency(accountBalance)}</p>
+                </CardContent>
+            </Card>
+        ) : (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Starting Balance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold">{formatCurrency(startingBalance)}</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Ending Balance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold">{formatCurrency(accountBalance)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Inflow</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-green-500">{formatCurrency(totalInflow)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Outflow</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-red-500">{formatCurrency(totalOutflow)}</p>
+                    </CardContent>
+                </Card>
+            </div>
+        )}
+
+        {accountDetails.type !== 'Credit Card' && (
+            <div className="lg:col-span-1">
+                 <SpendingBreakdown />
+            </div>
+        )}
       
         <Card className="col-span-full">
             <CardHeader>
