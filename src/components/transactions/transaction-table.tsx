@@ -163,7 +163,7 @@ export function TransactionTable({ transactions, onEdit }: { transactions: Trans
     },
     initialState: {
         pagination: {
-            pageSize: 30,
+            pageSize: 100,
         }
     }
   });
@@ -312,7 +312,7 @@ export function TransactionTable({ transactions, onEdit }: { transactions: Trans
                     <SelectValue placeholder={table.getState().pagination.pageSize} />
                 </SelectTrigger>
                 <SelectContent side="top">
-                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                    {[10, 20, 30, 40, 50, 100].map((pageSize) => (
                     <SelectItem key={pageSize} value={`${pageSize}`}>
                         {pageSize}
                     </SelectItem>
