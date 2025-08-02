@@ -81,6 +81,13 @@ export default function AccountDetailPage() {
         let balance = 0;
         let usage = 0;
         let payments = 0;
+        
+        const isCreditCard = accountDetails?.type === 'Credit Card';
+        const creditLimit = 35200;
+
+        if (isCreditCard) {
+            balance = -creditLimit;
+        }
 
         const cycleTransactions = lastPaidDate 
             ? transactions.filter(t => new Date(t.date) >= lastPaidDate)
@@ -103,7 +110,7 @@ export default function AccountDetailPage() {
         });
 
         return { accountBalance: balance, totalUsage: usage, totalPayments: payments };
-    }, [transactions, lastPaidDate]);
+    }, [transactions, lastPaidDate, accountDetails]);
 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
