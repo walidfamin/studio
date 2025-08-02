@@ -52,6 +52,16 @@ export default function EditInvestmentPage() {
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
+        defaultValues: {
+            name: '',
+            totalValue: 0,
+            downPayment: 0,
+            paymentType: 'mortgage',
+            loanAmount: 0,
+            installmentAmount: 0,
+            cashContributors: '',
+            paymentPlan: [],
+        }
     });
     
     useEffect(() => {
@@ -271,3 +281,4 @@ export default function EditInvestmentPage() {
         </div>
     );
 }
+
