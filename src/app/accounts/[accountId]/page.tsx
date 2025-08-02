@@ -69,27 +69,12 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         }
     }, [accountId]);
     
-     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
+    const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
         let balance = 0;
         let inflow = 0;
         let outflow = 0;
-        let startBalance = 0;
 
-        const sortedTransactions = [...transactions].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
-        if (sortedTransactions.length > 0) {
-            // Infer starting balance from the first transaction if it's a statement import
-            const firstTransaction = sortedTransactions[0];
-            if (firstTransaction.type === 'income') {
-                startBalance = firstTransaction.amount;
-            } else {
-                 //This is a simplification. A true starting balance would need to be provided or calculated differently.
-                startBalance = 0;
-            }
-        }
-
-
-        sortedTransactions.forEach(t => {
+        transactions.forEach(t => {
             if (t.type === 'income') {
                 balance += t.amount;
                 inflow += t.amount;
@@ -101,8 +86,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         
         // This is a simplification and assumes the balance from transactions reflects the account's state.
         // For a more accurate starting balance, it would likely need to be set manually or from a different data source.
-        startBalance = balance + outflow - inflow;
-
+        const startBalance = balance + outflow - inflow;
 
         return { accountBalance: balance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
