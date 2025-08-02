@@ -48,9 +48,10 @@ function parseFlexibleDate(dateString: string | number): Date | null {
 
 
 export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
-    
-    const { accountId } = use(params);
-    const [accountDetails] = useState<Account | undefined>(accounts.find(a => a.id === accountId));
+    const accountId = use(params).accountId;
+    const [accountDetails, setAccountDetails] = useState<Account | undefined>();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast();
     
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -59,10 +60,9 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const [transferToAccount, setTransferToAccount] = useState<string>('');
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const { toast } = useToast();
-
     useEffect(() => {
+        const details = accounts.find(a => a.id === accountId);
+        setAccountDetails(details);
         if (accountId) {
             const accountTransactions = initialTransactions.filter(t => t.accountId === accountId);
             setTransactions(accountTransactions);
@@ -70,16 +70,14 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     }, [accountId]);
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
-        if (transactions.length === 0) {
+        if (!transactions || transactions.length === 0) {
             return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
         }
 
-        // Sort transactions by date ascending to correctly calculate balances
         const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const startBalance = sortedTransactions[0].balance ?? 0;
         const endBalance = sortedTransactions[sortedTransactions.length - 1].balance ?? 0;
-
+        
         let inflow = 0;
         let outflow = 0;
 
@@ -90,6 +88,9 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 outflow += t.amount;
             }
         });
+        
+        const startBalance = endBalance - inflow + outflow;
+
 
         return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
@@ -189,16 +190,24 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
     };
 
-    const processStandardStatement = (data: any[][], importId: string) => {
-         const headers = data[0].map(h => String(h).trim());
-         const dateIndex = headers.indexOf('Value Date');
-         const descIndex = headers.indexOf('Description');
-         const debitIndex = headers.indexOf('Debit Amount');
-         const creditIndex = headers.indexOf('Credit Amount');
-         const balanceIndex = headers.indexOf('Balance');
+    const findHeaderIndex = (headers: string[], possibleNames: string[]): number => {
+        for (const name of possibleNames) {
+            const index = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+            if (index !== -1) return index;
+        }
+        return -1;
+    };
 
+    const processStandardStatement = (data: any[][], importId: string) => {
+        const headers = data[0].map(h => String(h).trim());
+        const dateIndex = findHeaderIndex(headers, ['Value Date', 'Date', 'Posting Date']);
+        const descIndex = findHeaderIndex(headers, ['Description', 'Narrative']);
+        const debitIndex = findHeaderIndex(headers, ['Debit', 'Debit Amount']);
+        const creditIndex = findHeaderIndex(headers, ['Credit', 'Credit Amount']);
+        const balanceIndex = findHeaderIndex(headers, ['Balance']);
+        
         if (dateIndex === -1 || descIndex === -1 || debitIndex === -1 || creditIndex === -1 || balanceIndex === -1) {
-            throw new Error("Invalid file headers. Expected 'Value Date', 'Description', 'Debit Amount', 'Credit Amount', 'Balance'.");
+            throw new Error("Invalid file headers. Could not find required columns for Date, Description, Debit, Credit, and Balance.");
         }
 
         const rows = data.slice(1);
