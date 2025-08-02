@@ -276,7 +276,7 @@ export function TransactionTable({ transactions, onEdit }: { transactions: Trans
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  ADDED TRANSACTION SHOULD SHOWS HERE
                 </TableCell>
               </TableRow>
             )}
