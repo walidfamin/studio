@@ -50,3 +50,15 @@ export function addInvestment(investment: Omit<Investment, 'id'>) {
     investments.push(newInvestment);
     return newInvestment;
 }
+
+export function addTransaction(transaction: Omit<Transaction, 'id' | 'date'> & { date: Date }) {
+    const newTransaction: Transaction = {
+        ...transaction,
+        id: `tx_${Date.now()}`,
+        date: transaction.date.toISOString(),
+    };
+    transactions.unshift(newTransaction);
+    return newTransaction;
+}
+
+    
