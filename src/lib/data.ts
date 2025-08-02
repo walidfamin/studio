@@ -1,4 +1,5 @@
-import type { Transaction, Account, Property } from './types';
+
+import type { Transaction, Account, Investment } from './types';
 
 export const transactions: Transaction[] = [];
 
@@ -35,7 +36,7 @@ export const accounts: Account[] = [
     { id: 'rak_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'RAK BANK' },
 ];
 
-export let properties: Property[] = [
+export let properties: Investment[] = [
     {
         id: 'prop1',
         name: 'Downtown Apartment',
@@ -55,8 +56,8 @@ export let properties: Property[] = [
     }
 ];
 
-export function addProperty(property: Omit<Property, 'id'>) {
-    const newProperty: Property = {
+export function addProperty(property: Omit<Investment, 'id'>) {
+    const newProperty: Investment = {
         ...property,
         id: `prop_${Date.now()}`
     };
@@ -64,6 +65,6 @@ export function addProperty(property: Omit<Property, 'id'>) {
     return newProperty;
 }
 
-export function updateProperty(propertyId: string, updatedProperty: Partial<Property>) {
+export function updateProperty(propertyId: string, updatedProperty: Partial<Investment>) {
     properties = properties.map(p => p.id === propertyId ? { ...p, ...updatedProperty } : p);
 }

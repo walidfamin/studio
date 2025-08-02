@@ -1,3 +1,4 @@
+
 export type Transaction = {
   id: string;
   date: string;
@@ -27,7 +28,7 @@ export type Installment = {
   status: 'paid' | 'unpaid';
 };
 
-export type Property = {
+export type Investment = {
   id: string;
   name: string;
   location: string;
