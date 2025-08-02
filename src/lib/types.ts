@@ -1,5 +1,4 @@
 
-
 export type Transaction = {
   id: string;
   date: string;
@@ -8,6 +7,7 @@ export type Transaction = {
   type: 'income' | 'expense';
   category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment' | 'Transfer' | 'Shopping' | 'DEWA' | 'Etisalat' | 'Du' | 'Travel' | 'Repair';
   accountId: string;
+  investmentId?: string; // To link a transaction to an investment
   importId?: string; // To track which import a transaction came from
   balance?: number; // Running balance from the statement
 };
@@ -34,14 +34,4 @@ export type Installment = {
 export type Investment = {
   id: string;
   name: string;
-  location: string;
-  totalValue: number;
-  downPayment: number;
-  paymentType: 'mortgage' | 'cash' | 'installment';
-  cashContributors?: Contributor[];
-  loanAmount: number;
-  installmentAmount: number;
-  nextInstallmentDate: string;
-  paymentsMade: number;
-  paymentPlan?: Installment[];
 };

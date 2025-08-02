@@ -1,5 +1,5 @@
 
-import type { Transaction, Account, Property, Investment } from './types';
+import type { Transaction, Account, Investment } from './types';
 
 export const transactions: Transaction[] = [];
 
@@ -36,37 +36,17 @@ export const accounts: Account[] = [
     { id: 'rak_current', name: 'Current Account', balance: 0, type: 'Current Account', bank: 'RAK BANK' },
 ];
 
-export let properties: Investment[] = [
-    {
-        id: 'prop1',
-        name: 'Downtown Apartment',
-        location: 'Dubai, UAE',
-        totalValue: 1200000,
-        downPayment: 240000,
-        paymentType: 'mortgage',
-        loanAmount: 960000,
-        installmentAmount: 5500,
-        nextInstallmentDate: '2024-08-01T00:00:00.000Z',
-        paymentsMade: 55000,
-        paymentPlan: [
-            { date: '2024-08-01', amount: 5500, status: 'unpaid' },
-            { date: '2024-09-01', amount: 5500, status: 'unpaid' },
-            { date: '2024-10-01', amount: 5500, status: 'unpaid' },
-        ]
-    }
+export let investments: Investment[] = [
+    { id: 'inv1', name: 'Villa in Project' },
+    { id: 'inv2', name: 'Startup Fund' },
 ];
 
-export let investments: Investment[] = [];
 
-export function addProperty(property: Omit<Investment, 'id'>) {
-    const newProperty: Investment = {
-        ...property,
-        id: `prop_${Date.now()}`
+export function addInvestment(investment: Omit<Investment, 'id'>) {
+    const newInvestment: Investment = {
+        ...investment,
+        id: `inv_${Date.now()}`
     };
-    properties.push(newProperty);
-    return newProperty;
-}
-
-export function updateProperty(propertyId: string, updatedProperty: Partial<Investment>) {
-    properties = properties.map(p => p.id === propertyId ? { ...p, ...updatedProperty } : p);
+    investments.push(newInvestment);
+    return newInvestment;
 }

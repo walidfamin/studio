@@ -1,59 +1,41 @@
 
-
 'use client';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { properties as investments } from "@/lib/data";
+import { investments, transactions } from "@/lib/data";
 import { Investment } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import { format } from 'date-fns';
-import { PlusCircle, Landmark, Edit } from "lucide-react";
+import { PlusCircle, Landmark } from "lucide-react";
 import Link from "next/link";
-
+import { useMemo } from "react";
 
 function InvestmentCard({ investment }: { investment: Investment }) {
-    const amountRemaining = investment.loanAmount - investment.paymentsMade;
-    const progress = (investment.paymentsMade / investment.loanAmount) * 100;
+    
+    const totalPaid = useMemo(() => {
+        return transactions
+            .filter(t => t.investmentId === investment.id)
+            .reduce((sum, t) => sum + t.amount, 0);
+    }, [investment.id]);
 
     return (
         <Card>
             <CardHeader>
                 <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                        <Link href={`/investments/${investment.id}`}>
-                            <CardTitle className="font-headline flex items-center gap-2 hover:underline">
+                        <Link href={`/investments/${investment.id}`} className="block hover:underline">
+                            <CardTitle className="font-headline flex items-center gap-2">
                                <Landmark className="w-5 h-5 text-accent"/> {investment.name}
                             </CardTitle>
                         </Link>
-                        <CardDescription>{formatCurrency(investment.totalValue)}</CardDescription>
+                        <CardDescription>Total Paid: {formatCurrency(totalPaid)}</CardDescription>
                     </div>
-                     <Button variant="outline" size="sm" asChild>
-                        <Link href={`/investments/${investment.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                        </Link>
-                    </Button>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div>
-                    <div className="flex justify-between items-baseline mb-1">
-                        <span className="text-sm font-medium">Loan Progress</span>
-                        <span className="text-xs text-muted-foreground">{formatCurrency(amountRemaining)} remaining</span>
-                    </div>
-                    <Progress value={progress} />
-                </div>
-                 <div className="text-sm space-y-2">
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Next Installment</span>
-                        <span className="font-medium">{format(new Date(investment.nextInstallmentDate), 'PPP')}</span>
-                    </div>
-                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Amount</span>
-                        <span className="font-medium">{formatCurrency(investment.installmentAmount)}</span>
-                    </div>
-                </div>
+             <CardContent>
+                <Button variant="outline" size="sm" asChild>
+                    <Link href={`/investments/${investment.id}`}>View Details</Link>
+                </Button>
             </CardContent>
         </Card>
     )

@@ -1,10 +1,9 @@
 
-
 'use client';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { accounts, transactions as initialTransactions } from "@/lib/data";
+import { accounts, investments, transactions as initialTransactions } from "@/lib/data";
 import { Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useEffect, useMemo, startTransition, use } from "react";
@@ -59,6 +58,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const [selectedCategory, setSelectedCategory] = useState<Transaction['category'] | 'Other' | 'Transfer'>('');
     const [customCategory, setCustomCategory] = useState<string>('');
     const [transferToAccount, setTransferToAccount] = useState<string>('');
+    const [investmentId, setInvestmentId] = useState<string>('');
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
 
     useEffect(() => {
@@ -321,8 +321,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         let finalCategory: Transaction['category'];
         if (selectedCategory === 'Other') {
             finalCategory = customCategory.trim() as Transaction['category'];
-        } else if (selectedCategory === 'Transfer') {
-            finalCategory = 'Transfer';
         } else {
             finalCategory = selectedCategory as Transaction['category'];
         }
@@ -334,6 +332,11 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
         if (finalCategory === 'Transfer' && !transferToAccount) {
             toast({ variant: "destructive", title: "Destination account not selected", description: "Please select an account for the transfer." });
+            return;
+        }
+
+        if (finalCategory === 'Investment' && !investmentId) {
+            toast({ variant: "destructive", title: "Investment not selected", description: "Please select an investment." });
             return;
         }
 
@@ -350,7 +353,8 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                         if (t.category !== finalCategory) {
                             updatedCount++;
                         }
-                        return { ...t, category: finalCategory };
+                         const updatedTransaction = { ...t, category: finalCategory, investmentId: finalCategory === 'Investment' ? investmentId : undefined };
+                        return updatedTransaction;
                     }
                     return t;
                 });
@@ -388,6 +392,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setSelectedCategory(transaction.category);
         setCustomCategory('');
         setTransferToAccount('');
+        setInvestmentId(transaction.investmentId || '');
         setApplyToAll(true);
     };
 
@@ -396,6 +401,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setSelectedCategory('');
         setCustomCategory('');
         setTransferToAccount('');
+        setInvestmentId('');
     }
 
   return (
@@ -531,12 +537,12 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                                         <SelectItem value="Food">Food</SelectItem>
                                         <SelectItem value="Transport">Transport</SelectItem>
                                         <SelectItem value="Spends">Spends</SelectItem>
-                                        <SelectItem value="Investment">Investment</SelectItem>
                                         <SelectItem value="Lifestyle">Lifestyle</SelectItem>
                                         <SelectItem value="Salary">Salary</SelectItem>
                                         <SelectItem value="Rent/Mortgage">Rent/Mortgage</SelectItem>
                                         <SelectItem value="Groceries">Groceries</SelectItem>
                                         <SelectItem value="Transfer">Transfer</SelectItem>
+                                        <SelectItem value="Investment">Investment</SelectItem>
                                     </>
                                 )}
                                 <SelectItem value="Other">Other (Custom)</SelectItem>
@@ -564,6 +570,21 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                                 <SelectContent>
                                     {accounts.filter(acc => acc.id !== accountId).map(acc => (
                                         <SelectItem key={acc.id} value={acc.id}>{acc.name} - {acc.bank}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+                     {selectedCategory === 'Investment' && (
+                        <div>
+                            <Label htmlFor="investment">Allocate to Investment</Label>
+                            <Select onValueChange={setInvestmentId} defaultValue={investmentId}>
+                                <SelectTrigger id="investment">
+                                    <SelectValue placeholder="Select an investment" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {investments.map(inv => (
+                                        <SelectItem key={inv.id} value={inv.id}>{inv.name}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
