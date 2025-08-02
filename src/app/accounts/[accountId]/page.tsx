@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 function parseFlexibleDate(dateStr: string | number): Date {
@@ -65,6 +66,8 @@ export default function AccountDetailPage() {
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [customCategory, setCustomCategory] = useState<string>('');
+    const [applyToAll, setApplyToAll] = useState<boolean>(true);
+
 
     useEffect(() => {
         if (accountId) {
@@ -241,7 +244,10 @@ export default function AccountDetailPage() {
         let updatedCount = 0;
         setTransactions(prev => {
             const newTransactions = prev.map(t => {
-                if (t.id === editingTransaction.id || (t.description === editingTransaction.description && t.category === 'Uncategorized')) {
+                const isMatchingTransaction = t.id === editingTransaction.id || 
+                    (applyToAll && t.description === editingTransaction.description && t.category === 'Uncategorized');
+
+                if (isMatchingTransaction) {
                     if (t.category !== finalCategory) {
                         updatedCount++;
                     }
@@ -266,6 +272,7 @@ export default function AccountDetailPage() {
         setEditingTransaction(transaction);
         setSelectedCategory(transaction.category);
         setCustomCategory('');
+        setApplyToAll(true);
     };
 
     const handleCloseDialog = () => {
@@ -507,6 +514,16 @@ export default function AccountDetailPage() {
                             />
                         </div>
                     )}
+                    <div className="flex items-center space-x-2">
+                        <Checkbox 
+                            id="apply-to-all" 
+                            checked={applyToAll} 
+                            onCheckedChange={(checked) => setApplyToAll(checked as boolean)}
+                        />
+                        <Label htmlFor="apply-to-all" className="text-sm font-normal">
+                            Apply to all uncategorized transactions with this description.
+                        </Label>
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={handleCloseDialog}>Cancel</Button>
