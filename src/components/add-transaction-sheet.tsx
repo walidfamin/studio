@@ -40,7 +40,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 
 const formSchema = z.object({
-    accountId: z.string({ required_error: 'Please select an account.' }),
+    accountId: z.string({ required_error: 'Please select an account.' }).min(1, "Please select an account."),
     description: z.string().min(1, 'Description is required.'),
     amount: z.coerce.number().positive('Amount must be a positive number.'),
     type: z.enum(['income', 'expense']),
@@ -65,8 +65,14 @@ export function AddTransactionSheet() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      accountId: '',
+      description: '',
+      amount: 0,
       type: 'expense',
       date: new Date(),
+      category: '',
+      customCategory: '',
+      investmentId: '',
     },
   });
   
@@ -323,5 +329,3 @@ export function AddTransactionSheet() {
     </Sheet>
   );
 }
-
-    
