@@ -295,8 +295,9 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 }
             }
              
-            if (String(description).toLowerCase().includes('payment')) {
+            if (accountDetails?.type === 'Credit Card' && String(description).toLowerCase().includes('payment')) {
                 category = 'Credit Card Payment';
+                type = 'income'; // Payments to a CC are income *to that account*
             }
 
 
@@ -718,9 +719,3 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
-
-    
-
-    
-
-
