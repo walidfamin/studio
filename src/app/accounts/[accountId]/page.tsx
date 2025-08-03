@@ -29,40 +29,29 @@ function parseFlexibleDate(dateInput: string | number | Date): Date | null {
     }
 
     if (typeof dateInput === 'string') {
-        const parts = dateInput.split(/[-/.]/); // supports dd/MM/yy, dd-MM-yy, dd.MM.yy
+        const parts = dateInput.split(/[-/.]/);
         if (parts.length === 3) {
             let [day, month, year] = parts;
 
             if (year.length === 2) {
                 const intYear = parseInt(year, 10);
-                year = (intYear <= 50 ? 2000 + intYear : 1900 + intYear).toString();
+                year = (intYear < 50 ? 2000 + intYear : 1900 + intYear).toString();
             }
             
-            // Rebuild date string to force proper parsing in a known format
             const normalizedDateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
             const parsed = new Date(normalizedDateStr);
             if (isValid(parsed)) {
                 return parsed;
             }
         }
-
-        // Fallback for other string formats if the primary logic fails
-        const formats = [
-            "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yy", "dd MMMM yyyy",
-            "MM-dd-yyyy", "yyyy/MM/dd",
-        ];
-        for (const fmt of formats) {
-            const parsedDate = parse(dateInput, fmt, new Date());
-            if (isValid(parsedDate)) {
-                return parsedDate;
-            }
+        
+        const fallbackDate = new Date(dateInput);
+        if (isValid(fallbackDate)) {
+            return fallbackDate;
         }
     }
 
-    // Fallback for Excel's numeric date format or other numeric values
     if (typeof dateInput === 'number' && dateInput > 0) {
-        // Excel's epoch starts on 1899-12-30, not 1970-01-01.
-        // The number represents days since epoch.
         const excelEpoch = new Date('1899-12-30');
         const date = new Date(excelEpoch.getTime() + dateInput * 24 * 60 * 60 * 1000);
         
@@ -72,12 +61,6 @@ function parseFlexibleDate(dateInput: string | number | Date): Date | null {
         if (isValid(adjustedDate)) {
             return adjustedDate;
         }
-    }
-    
-    // Final fallback
-    const fallbackDate = new Date(dateInput);
-    if (isValid(fallbackDate)) {
-        return fallbackDate;
     }
 
     return null;
@@ -132,33 +115,36 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         if (sortedByDate.length === 0) {
             // Fallback for accounts without balance data (e.g., manually created)
             let balance = 0;
-            let inflow = 0;
-            let outflow = 0;
             transactions.forEach(t => {
-                if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
-                    inflow += t.amount;
+                if (t.type === 'income') {
                     balance += t.amount;
-                } else if (t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
-                    outflow += t.amount;
+                } else if (t.type === 'expense') {
                     balance -= t.amount;
                 }
             });
+            
+            const inflow = transactions
+                .filter(t => t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const outflow = transactions
+                .filter(t => t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
+                .reduce((sum, t) => sum + t.amount, 0);
+
             return { accountBalance: balance, startingBalance: 0, totalInflow: inflow, totalOutflow: outflow };
         }
         
         const startBalance = sortedByDate[0]?.balance ?? 0;
         const endBalance = sortedByDate[sortedByDate.length - 1]?.balance ?? 0;
 
-        let inflow = 0;
-        let outflow = 0;
+        const inflow = transactions
+            .filter(t => t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
+            .reduce((sum, t) => sum + t.amount, 0);
 
-        transactions.forEach(t => {
-            if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
-                inflow += t.amount;
-            } else if (t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
-                outflow += t.amount;
-            }
-        });
+        const outflow = transactions
+            .filter(t => t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
+            .reduce((sum, t) => sum + t.amount, 0);
+
 
         return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
@@ -192,7 +178,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     
     const processData = (data: any[][]) => {
         try {
-            // No need for separate logic anymore, use the credit card one as it's the most robust
             processCreditCardStatement(data);
         } catch (error: any) {
              console.error("Import failed:", error);
@@ -297,7 +282,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
              
             if (accountDetails?.type === 'Credit Card' && String(description).toLowerCase().includes('payment')) {
                 category = 'Credit Card Payment';
-                type = 'income'; // Payments to a CC are income *to that account*
+                type = 'income'; // Payments to a CC are income *to that account* for balance sheet purposes
             }
 
 
@@ -354,7 +339,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                // Use cellDates: true to let xlsx handle date parsing
                 const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
