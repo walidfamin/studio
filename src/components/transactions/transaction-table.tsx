@@ -165,6 +165,9 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
           </Select>
         );
       },
+       filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id))
+      },
     },
     {
         accessorKey: 'type',
@@ -173,7 +176,7 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
             const type = row.getValue('type') as string;
             const category = row.original.category;
             
-            if (category === 'Credit Card Payment') {
+            if (category === 'Credit Card Payment' || type === 'transfer') {
                  return <Badge variant="outline">Transfer</Badge>
             }
             const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
@@ -317,6 +320,32 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                    Assignee <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuLabel>Filter by Assignee</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                     <DropdownMenuCheckboxItem
+                        checked={!table.getColumn('assignedTo')?.getFilterValue()}
+                        onCheckedChange={() => table.getColumn('assignedTo')?.setFilterValue(undefined)}
+                        >
+                        All
+                        </DropdownMenuCheckboxItem>
+                    {['Walid', 'Nathalie', 'Company'].map((assignee) => (
+                    <DropdownMenuCheckboxItem
+                        key={assignee}
+                        checked={table.getColumn('assignedTo')?.getFilterValue() === assignee}
+                        onCheckedChange={() => table.getColumn('assignedTo')?.setFilterValue(assignee)}
+                    >
+                        {assignee}
+                    </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
