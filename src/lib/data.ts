@@ -51,17 +51,36 @@ export function addInvestment(investment: Omit<Investment, 'id'>) {
     return newInvestment;
 }
 
+const createTransactionId = (t: Omit<Transaction, 'id' | 'date'> & { date: Date }): string => {
+    const datePart = t.date.toISOString().split('T')[0];
+    const amountPart = t.amount.toFixed(2);
+    const descHash = t.description.split('').reduce((acc, char) => {
+        return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+    return `${datePart}_${amountPart}_${t.type}_${descHash}`;
+};
+
 export function addTransaction(transaction: Omit<Transaction, 'id' | 'date'> & { date: Date }) {
     const newTransaction: Transaction = {
         ...transaction,
-        id: `tx_${Date.now()}`,
+        id: createTransactionId(transaction),
         date: transaction.date.toISOString(),
     };
-    transactions.unshift(newTransaction);
+    
+    // Prevent duplicates by checking for existing ID
+    const existingIndex = transactions.findIndex(t => t.id === newTransaction.id);
+    if (existingIndex !== -1) {
+        transactions[existingIndex] = newTransaction; // Update existing
+    } else {
+        transactions.unshift(newTransaction); // Add new
+    }
+
     return newTransaction;
 }
 
 export function deleteTransactions(ids: string[]) {
     transactions = transactions.filter(t => !ids.includes(t.id));
 }
+    
+
     

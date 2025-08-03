@@ -82,6 +82,16 @@ function parseFlexibleDate(dateString: string | number): Date | null {
   return null;
 }
 
+const createTransactionId = (t: Omit<Transaction, 'id'>): string => {
+    const datePart = new Date(t.date).toISOString().split('T')[0];
+    const amountPart = t.amount.toFixed(2);
+    // A simple hash function to avoid overly long IDs
+    const descHash = t.description.split('').reduce((acc, char) => {
+        return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+    return `${datePart}_${amountPart}_${t.type}_${descHash}`;
+};
+
 
 export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
     const accountId = use(params).accountId;
@@ -179,9 +189,12 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     };
     
     const processData = (data: any[][]) => {
-        const importId = `import_${Date.now()}`;
         try {
-            processStandardStatement(data, importId);
+            if (accountDetails?.type === 'Credit Card') {
+                 processCreditCardStatement(data);
+            } else {
+                processStandardStatement(data);
+            }
         } catch (error: any) {
              console.error("Import failed:", error);
             toast({
@@ -204,7 +217,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         return -1;
     };
 
-    const processStandardStatement = (data: any[][], importId: string) => {
+    const processStandardStatement = (data: any[][]) => {
         // Assume headers are in the first row
         const headers = data[0].map(h => String(h).trim());
         const dateIndex = findHeaderIndex(headers, ['posting date', 'date']);
@@ -214,8 +227,12 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         const balanceIndex = findHeaderIndex(headers, ['balance']);
         
         if (dateIndex === -1 || descIndex === -1 || (debitIndex === -1 && creditIndex === -1) || balanceIndex === -1) {
-             // Fallback to credit card format if headers don't match
-            return processCreditCardStatement(data, importId);
+            toast({
+                variant: "destructive",
+                title: "Import Error",
+                description: "Could not find required columns: Date, Description, Debit/Credit, Balance. Please use the template."
+            });
+            return;
         }
 
         const rows = data.slice(1);
@@ -256,17 +273,21 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 category = 'Credit Card Payment';
             }
 
-            return {
-                id: `tx_${Date.now()}_${index}`,
+            const transactionData = {
                 date: date.toISOString(),
                 description: String(description).trim(),
                 amount: amount,
                 type: type,
                 category: category,
                 accountId: accountId,
-                importId: importId,
                 balance: balanceAmount,
+            };
+
+            return {
+                ...transactionData,
+                id: createTransactionId(transactionData)
             } as Transaction;
+
         }).filter((t): t is Transaction => t !== null);
         
          if (newTransactions.length === 0) {
@@ -275,21 +296,28 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         }
 
         startTransition(() => {
+            const newTransactionIds = new Set(newTransactions.map(t => t.id));
+            
+            // Update local state for the current account page
             setTransactions(prev => {
-                const nonImported = prev.filter(t => t.importId !== importId);
-                const updatedTransactions = [...nonImported, ...newTransactions];
-                // Replace all existing transactions for this account in the global state
-                const otherAccountTransactions = initialTransactions.filter(t => t.accountId !== accountId);
-                initialTransactions.length = 0; // Clear the array
-                initialTransactions.push(...otherAccountTransactions, ...updatedTransactions); // Push new data
-
-                return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const existingWithoutNew = prev.filter(t => !newTransactionIds.has(t.id));
+                const updated = [...existingWithoutNew, ...newTransactions];
+                return updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             });
+
+            // Update global state, ensuring no duplicates across all accounts
+            const otherAccountTransactions = initialTransactions.filter(t => t.accountId !== accountId);
+            const thisAccountTransactions = initialTransactions.filter(t => t.accountId === accountId);
+            const existingThisAccountWithoutNew = thisAccountTransactions.filter(t => !newTransactionIds.has(t.id));
+
+            initialTransactions.length = 0; // Clear the array
+            initialTransactions.push(...otherAccountTransactions, ...existingThisAccountWithoutNew, ...newTransactions);
         });
-        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
+
+        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported or updated.` });
     };
 
-    const processCreditCardStatement = (data: any[][], importId: string) => {
+    const processCreditCardStatement = (data: any[][]) => {
         const rows = data.slice(1);
         
         const newTransactions = rows.map((row, index) => {
@@ -328,16 +356,19 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 type = 'expense';
             }
 
-            return {
-                id: `tx_${Date.now()}_${index}`,
+            const transactionData = {
                 date: date.toISOString(),
                 description: descriptionStr,
                 amount: amount,
                 type: type,
                 category: category,
                 accountId: accountId,
-                importId: importId,
             };
+
+            return {
+                ...transactionData,
+                id: createTransactionId(transactionData)
+            } as Transaction;
         }).filter((t): t is Transaction => t !== null);
 
         if (newTransactions.length === 0) {
@@ -345,13 +376,23 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             return;
         }
 
-        setTransactions(prev => {
-            const nonImported = prev.filter(t => t.importId !== importId);
-            const updatedTransactions = [...nonImported, ...newTransactions];
-            initialTransactions.push(...newTransactions);
-            return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        startTransition(() => {
+             const newTransactionIds = new Set(newTransactions.map(t => t.id));
+            
+            setTransactions(prev => {
+                const existingWithoutNew = prev.filter(t => !newTransactionIds.has(t.id));
+                const updated = [...existingWithoutNew, ...newTransactions];
+                return updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            });
+
+            const otherAccountTransactions = initialTransactions.filter(t => t.accountId !== accountId);
+            const thisAccountTransactions = initialTransactions.filter(t => t.accountId === accountId);
+            const existingThisAccountWithoutNew = thisAccountTransactions.filter(t => !newTransactionIds.has(t.id));
+
+            initialTransactions.length = 0;
+            initialTransactions.push(...otherAccountTransactions, ...existingThisAccountWithoutNew, ...newTransactions);
         });
-        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
+        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported or updated.` });
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -438,14 +479,18 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                     const transferAmount = editingTransaction.amount;
                     const transferDescription = `Transfer from ${accountDetails.name}`;
                     
-                    const transferTransaction: Transaction = {
-                        id: `tx_transfer_${Date.now()}`,
+                    const transferTransactionData = {
                         date: editingTransaction.date,
                         description: transferDescription,
                         amount: transferAmount,
-                        type: 'income',
-                        category: 'Transfer',
+                        type: 'income' as 'income',
+                        category: 'Transfer' as 'Transfer',
                         accountId: transferToAccount,
+                    };
+
+                    const transferTransaction: Transaction = {
+                        ...transferTransactionData,
+                        id: createTransactionId(transferTransactionData)
                     };
                     initialTransactions.push(transferTransaction);
                     transferCreated = true;
@@ -686,3 +731,5 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
+
+    

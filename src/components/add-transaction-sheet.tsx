@@ -67,7 +67,7 @@ export function AddTransactionSheet() {
     defaultValues: {
       accountId: '',
       description: '',
-      amount: 0,
+      amount: '' as any, // Set to empty string to avoid uncontrolled component warning
       type: 'expense',
       date: new Date(),
       category: '',
@@ -92,7 +92,16 @@ export function AddTransactionSheet() {
       title: 'Transaction Added',
       description: 'Your new transaction has been successfully saved.',
     });
-    form.reset();
+    form.reset({
+      accountId: '',
+      description: '',
+      amount: '' as any,
+      type: 'expense',
+      date: new Date(),
+      category: '',
+      customCategory: '',
+      investmentId: '',
+    });
     // Ideally we would close the sheet here, but SheetClose is handling it.
   };
 
@@ -329,3 +338,5 @@ export function AddTransactionSheet() {
     </Sheet>
   );
 }
+
+    
