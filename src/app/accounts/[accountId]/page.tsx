@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { SpendingByCategory } from "@/components/reports/spending-by-category";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
 function parseFlexibleDate(dateInput: string | number | Date): Date | null {
@@ -107,6 +108,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const [investmentId, setInvestmentId] = useState<string>('');
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
     const [assignedTo, setAssignedTo] = useState<Transaction['assignedTo']>('Walid');
+    const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
 
 
     useEffect(() => {
@@ -293,15 +295,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 }
             }
              
-            // Handle cases where credit card payments might be listed as debits in a bank statement
-            if (accountDetails?.type !== 'Credit Card' && String(description).toLowerCase().includes('credit card payment')) {
-                type = 'expense';
-                category = 'Credit Card Payment';
-            }
-
-            // Always treat credit card payments as income to the credit card account itself for balance calculation
-             if (accountDetails?.type === 'Credit Card' && String(description).toLowerCase().includes('payment')) {
-                type = 'income';
+            if (String(description).toLowerCase().includes('payment')) {
                 category = 'Credit Card Payment';
             }
 
@@ -411,11 +405,12 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                     (applyToAll && t.description === editingTransaction.description && t.category === 'Uncategorized');
 
                 if (isMatchingTransaction) {
-                    if (t.category !== finalCategory || t.assignedTo !== assignedTo) {
+                    if (t.category !== finalCategory || t.assignedTo !== assignedTo || t.type !== transactionType) {
                         updatedCount++;
                     }
                     return { 
                         ...t, 
+                        type: transactionType,
                         category: finalCategory,
                         assignedTo: assignedTo,
                         investmentId: finalCategory === 'Investment' ? investmentId : undefined 
@@ -469,6 +464,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const handleEditClick = (transaction: Transaction) => {
         setEditingTransaction(transaction);
         setSelectedCategory(transaction.category);
+        setTransactionType(transaction.type);
         setCustomCategory('');
         setTransferToAccount('');
         setInvestmentId(transaction.investmentId || '');
@@ -596,6 +592,23 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                     <div>
+                        <Label>Transaction Type</Label>
+                         <RadioGroup
+                            onValueChange={(v) => setTransactionType(v as any)}
+                            defaultValue={transactionType}
+                            className="flex gap-4 mt-2"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="expense" id="r-expense" />
+                                <Label htmlFor="r-expense" className="font-normal">Expense</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="income" id="r-income" />
+                                <Label htmlFor="r-income" className="font-normal">Income</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                    <div>
                         <Label htmlFor="category">Category</Label>
                         <Select onValueChange={(value) => setSelectedCategory(value as any)} defaultValue={selectedCategory}>
                             <SelectTrigger id="category">
@@ -709,4 +722,5 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     
 
     
+
 
