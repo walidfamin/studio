@@ -23,32 +23,35 @@ import { Progress } from "@/components/ui/progress";
 
 
 function parseFlexibleDate(dateInput: string | number | Date): Date | null {
-  if (dateInput instanceof Date) {
-    if (isValid(dateInput)) {
-        return dateInput;
-    }
+  if (dateInput instanceof Date && isValid(dateInput)) {
+    return dateInput;
   }
-  
+
   if (typeof dateInput === 'string') {
-    const commonFormats = [
-        "dd/MM/yyyy", "dd-MM-yyyy", "dd.MM.yyyy",
-        "MM/dd/yyyy", "MM-dd-yyyy", "MM.dd.yyyy",
-        "yyyy-MM-dd", "yyyy/MM/dd", "yyyy.MM.dd",
-        "dd-MMM-yy", "dd MMMM yyyy", "MMMM d, yyyy"
+    const formats = [
+      "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yy", "dd MMMM yyyy",
+      "dd-MM-yyyy", "MM-dd-yyyy", "yyyy/MM/dd", "dd.MM.yyyy", "MM.dd.yyyy",
+      "dd/MM/yy", "MM/dd/yy"
     ];
 
-    for (const fmt of commonFormats) {
-        const parsedDate = parse(dateInput, fmt, new Date());
-        if (isValid(parsedDate)) {
-            return parsedDate;
+    for (const fmt of formats) {
+      const parsedDate = parse(dateInput, fmt, new Date());
+      if (isValid(parsedDate)) {
+        // Correct for 2-digit years
+        if (fmt.includes('yy') && !fmt.includes('yyyy')) {
+            if (parsedDate.getFullYear() < 2000) {
+                parsedDate.setFullYear(parsedDate.getFullYear() + 100);
+            }
         }
+        return parsedDate;
+      }
     }
   }
-  
-  // Fallback for native Date constructor (e.g., ISO strings)
+
+  // Fallback for native Date constructor and numeric values
   const fallbackDate = new Date(dateInput);
   if (isValid(fallbackDate)) {
-      return fallbackDate;
+    return fallbackDate;
   }
 
   return null;
@@ -677,3 +680,5 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
+
+    
