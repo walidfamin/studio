@@ -73,36 +73,38 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
         if (!transactions || transactions.length === 0) {
-           return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
-       }
+            return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
+        }
 
-       const statementTransactions = transactions.filter(t => t.balance !== undefined);
-       if (statementTransactions.length === 0) {
-           return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
-       }
+        const statementTransactions = transactions.filter(t => t.balance !== undefined);
+        if (statementTransactions.length === 0) {
+            return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
+        }
 
-       const sortedByDate = [...statementTransactions].sort((a, b) => {
-           const dateA = parseFlexibleDate(a.date)?.getTime() || 0;
-           const dateB = parseFlexibleDate(b.date)?.getTime() || 0;
-           return dateA - dateB;
-       });
+        const sortedByDate = [...statementTransactions].sort((a, b) => {
+            const dateA = parseFlexibleDate(a.date)?.getTime() || 0;
+            const dateB = parseFlexibleDate(b.date)?.getTime() || 0;
+            return dateA - dateB;
+        });
 
-       const startBalance = sortedByDate[0].balance ?? 0;
-       const endBalance = sortedByDate[sortedByDate.length - 1].balance ?? 0;
+        // The first transaction chronologically holds the starting balance.
+        const startBalance = sortedByDate[0].balance ?? 0;
+        // The last transaction chronologically holds the ending balance.
+        const endBalance = sortedByDate[sortedByDate.length - 1].balance ?? 0;
 
-       let inflow = 0;
-       let outflow = 0;
+        let inflow = 0;
+        let outflow = 0;
 
-       transactions.forEach(t => {
-           if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
-               inflow += t.amount;
-           } else if (t.type === 'expense' && t.category !== 'Transfer') {
-               outflow += t.amount;
-           }
-       });
+        transactions.forEach(t => {
+            if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
+                inflow += t.amount;
+            } else if (t.type === 'expense' && t.category !== 'Transfer') {
+                outflow += t.amount;
+            }
+        });
 
-       return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
-   }, [transactions]);
+        return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
+    }, [transactions]);
     
     const creditCardLimit = 35200;
     const { creditCardBalance, totalLifetimeSpends } = useMemo(() => {
@@ -629,5 +631,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
+
+    
 
     
