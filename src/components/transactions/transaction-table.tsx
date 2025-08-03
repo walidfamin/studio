@@ -60,7 +60,9 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
     { id: 'date', desc: true },
   ]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    "balance": false, // Hidden by default
+  });
   const [rowSelection, setRowSelection] = React.useState({});
   const { toast } = useToast();
 
@@ -148,6 +150,27 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
             const value = type === 'expense' ? -amount : amount;
 
             return <div className={`text-right font-medium pr-4 ${value > 0 ? 'text-green-600' : ''}`}>{formatCurrency(value)}</div>
+        }
+    },
+    {
+        accessorKey: 'balance',
+        header: ({ column }) => (
+          <div className="text-right">
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            >
+                Balance
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        ),
+        cell: ({ row }) => {
+            const balance = row.getValue('balance');
+            if (typeof balance !== 'number') {
+                return <div className="text-right font-medium pr-4 text-muted-foreground">N/A</div>;
+            }
+            return <div className="text-right font-medium pr-4">{formatCurrency(balance as number)}</div>
         }
     },
     ...(onEdit ? [{
