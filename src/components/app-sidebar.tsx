@@ -30,9 +30,11 @@ const getAccountBalance = (accountId: string, allTransactions: Transaction[]) =>
 
     if (account.type === 'Credit Card') {
         return accountTransactions.reduce((acc, t) => {
-            if (t.type === 'expense') return acc + t.amount;
-            // Payments reduce the balance (liability)
-            if (t.type === 'income' || t.category === 'Credit Card Payment') return acc - t.amount;
+            if (t.type === 'expense') {
+                return acc + t.amount;
+            } else if (t.type === 'income' || t.type === 'transfer' && t.category === 'Credit Card Payment') {
+                return acc - t.amount;
+            }
             return acc;
         }, 0);
     }
