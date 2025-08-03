@@ -27,6 +27,10 @@ function StatCard({ title, value }: { title: string; value: string }) {
 }
 
 export default function DashboardPage() {
+  const walidTransactions = useMemo(() => {
+    return transactions.filter(t => t.assignedTo === 'Walid');
+  }, [transactions]);
+
   const {
     totalIncome,
     totalExpenses,
@@ -37,7 +41,7 @@ export default function DashboardPage() {
     let expenses = 0;
     let investmentAmount = 0;
 
-    transactions.forEach(t => {
+    walidTransactions.forEach(t => {
       if (t.type === 'income' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
         income += t.amount;
       } else if (t.type === 'expense') {
@@ -55,7 +59,7 @@ export default function DashboardPage() {
       netSavings: income - expenses,
       investmentsMade: investmentAmount,
     };
-  }, []);
+  }, [walidTransactions]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -69,25 +73,25 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2">
-            <TransactionsOverTime />
+            <TransactionsOverTime transactions={walidTransactions} />
           </div>
           <div>
-            <SpendingBreakdown />
+            <SpendingBreakdown transactions={walidTransactions} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <CumulativeSavings />
-          <HighestMonthlyExpenses />
+          <CumulativeSavings transactions={walidTransactions} />
+          <HighestMonthlyExpenses transactions={walidTransactions} />
           <UpcomingPayments />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
-            <RecurringExpenses />
+            <RecurringExpenses transactions={walidTransactions} />
           </div>
           <div className="lg:col-span-2">
-            <InvestmentOverview />
+            <InvestmentOverview transactions={walidTransactions} />
           </div>
         </div>
       </main>

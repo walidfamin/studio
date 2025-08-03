@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { accounts as allAccounts, transactions } from "@/lib/data";
-import { Account } from "@/lib/types";
+import { Account, Transaction } from "@/lib/types";
 import { RefreshCw, Plus } from "lucide-react";
 import Image from "next/image";
 import {
@@ -45,7 +45,7 @@ allAccounts.forEach(account => {
     }
 });
 
-function getAccountBalance(accountId: string) {
+function getAccountBalance(accountId: string, transactions: Transaction[]) {
     return transactions
         .filter(t => t.accountId === accountId)
         .reduce((acc, t) => {
@@ -56,16 +56,17 @@ function getAccountBalance(accountId: string) {
 }
 
 function AccountRow({ account }: { account: Account }) {
-    const balance = getAccountBalance(account.id);
+    const walidTransactions = useMemo(() => transactions.filter(t => t.assignedTo === 'Walid'), [transactions]);
+    const balance = getAccountBalance(account.id, walidTransactions);
 
     const chartData = useMemo(() => {
-        const accountTransactions = transactions.filter(t => t.accountId === account.id).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const accountTransactions = walidTransactions.filter(t => t.accountId === account.id).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         let runningBalance = 0;
         return accountTransactions.map(t => {
             runningBalance += t.type === 'income' ? t.amount : -t.amount;
             return { v: runningBalance };
         });
-    }, [account.id]);
+    }, [account.id, walidTransactions]);
 
     const getLogoUrl = (bank: string) => {
         const domain = bank.toLowerCase() === 'rak bank' ? 'rakbank.ae' : `${bank.split(' ')[0].toLowerCase()}.com`;
@@ -100,7 +101,8 @@ function AccountRow({ account }: { account: Account }) {
 }
 
 function AccountGroup({ title, accounts }: { title: string, accounts: Account[] }) {
-    const total = accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
+    const walidTransactions = useMemo(() => transactions.filter(t => t.assignedTo === 'Walid'), [transactions]);
+    const total = accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id, walidTransactions), 0);
 
     return (
         <Card className="mb-6">
@@ -119,15 +121,17 @@ function AccountGroup({ title, accounts }: { title: string, accounts: Account[] 
 
 export default function AccountsPage() {
     
+    const walidTransactions = useMemo(() => transactions.filter(t => t.assignedTo === 'Walid'), [transactions]);
+
     const { netWorth, totalAssets, totalLiabilities, netWorthChartData } = useMemo(() => {
-        const balances = allAccounts.map(account => getAccountBalance(account.id));
+        const balances = allAccounts.map(account => getAccountBalance(account.id, walidTransactions));
         const netWorth = balances.reduce((sum, balance) => sum + balance, 0);
         const totalAssets = balances.filter(b => b > 0).reduce((sum, b) => sum + b, 0);
         const totalLiabilities = balances.filter(b => b < 0).reduce((sum, b) => sum + b, 0);
         
         const monthlyData: Record<string, { cash: number; investments: number; other: number; date: Date }> = {};
         
-        transactions.forEach(t => {
+        walidTransactions.forEach(t => {
             const date = new Date(t.date);
             const monthKey = date.toISOString().slice(0, 7);
             const account = allAccounts.find(a => a.id === t.accountId);
@@ -162,10 +166,10 @@ export default function AccountsPage() {
         });
 
         return { netWorth, totalAssets, totalLiabilities, netWorthChartData };
-    }, []);
+    }, [walidTransactions]);
 
-    const totalCash = accountGroups.cash.accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
-    const totalCredit = accountGroups.credit.accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
+    const totalCash = accountGroups.cash.accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id, walidTransactions), 0);
+    const totalCredit = accountGroups.credit.accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id, walidTransactions), 0);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

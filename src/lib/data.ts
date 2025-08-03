@@ -65,6 +65,7 @@ export function addTransaction(transaction: Omit<Transaction, 'id' | 'date'> & {
         ...transaction,
         id: createTransactionId(transaction),
         date: transaction.date.toISOString(),
+        assignedTo: transaction.assignedTo || 'Walid',
     };
     
     // Prevent duplicates by checking for existing ID
@@ -81,6 +82,3 @@ export function addTransaction(transaction: Omit<Transaction, 'id' | 'date'> & {
 export function deleteTransactions(ids: string[]) {
     transactions = transactions.filter(t => !ids.includes(t.id));
 }
-    
-
-    

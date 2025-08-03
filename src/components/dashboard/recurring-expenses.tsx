@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -7,12 +8,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '../ui/progress';
-import { transactions } from '@/lib/data';
+import { Transaction } from '@/lib/types';
 import { useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
-export function RecurringExpenses() {
+export function RecurringExpenses({ transactions }: { transactions: Transaction[] }) {
   const recurring = useMemo(() => {
     const now = new Date();
     const thisMonthInterval = { start: startOfMonth(now), end: endOfMonth(now) };
@@ -21,7 +22,7 @@ export function RecurringExpenses() {
         if (t.type !== 'expense') return false;
         try {
             const transactionDate = parseISO(t.date);
-            return isWithinInterval(transactionDate, interval);
+            return isWithinInterval(transactionDate, thisMonthInterval);
         } catch (e) {
             return false;
         }

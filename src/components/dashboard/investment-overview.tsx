@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -7,13 +8,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { investments, transactions } from '@/lib/data';
+import { investments } from '@/lib/data';
+import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { Button } from '../ui/button';
 
-export function InvestmentOverview() {
+export function InvestmentOverview({ transactions }: { transactions: Transaction[] }) {
   const investmentData = useMemo(() => {
     return investments.map(investment => {
       const totalPaid = transactions

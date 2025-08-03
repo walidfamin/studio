@@ -48,6 +48,7 @@ const formSchema = z.object({
     category: z.string().min(1, 'Category is required.'),
     customCategory: z.string().optional(),
     investmentId: z.string().optional(),
+    assignedTo: z.enum(['Walid', 'Nathalie', 'Company']),
 }).refine(data => {
     if (data.category === 'Other' && !data.customCategory) {
         return false;
@@ -73,6 +74,7 @@ export function AddTransactionSheet() {
       category: '',
       customCategory: '',
       investmentId: '',
+      assignedTo: 'Walid',
     },
   });
   
@@ -101,6 +103,7 @@ export function AddTransactionSheet() {
       category: '',
       customCategory: '',
       investmentId: '',
+      assignedTo: 'Walid',
     });
     // Ideally we would close the sheet here, but SheetClose is handling it.
   };
@@ -326,6 +329,28 @@ export function AddTransactionSheet() {
                         </FormItem>
                     )}
                 />
+                <FormField
+                    control={form.control}
+                    name="assignedTo"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Assigned To</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a person" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="Walid">Walid</SelectItem>
+                                    <SelectItem value="Nathalie">Nathalie</SelectItem>
+                                    <SelectItem value="Company">Company</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
             </div>
             <SheetFooter>
                 <SheetClose asChild>
@@ -338,5 +363,3 @@ export function AddTransactionSheet() {
     </Sheet>
   );
 }
-
-    

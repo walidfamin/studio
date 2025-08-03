@@ -1,14 +1,13 @@
 
-
 'use client';
 import { Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel, SidebarTrigger } from '@/components/ui/sidebar';
-import { TreePalm, Landmark, BarChart, Banknote, Settings, LifeBuoy, ChevronDown, BadgePercent, Building, Home, CreditCard, PiggyBank, PlusCircle, List } from 'lucide-react';
+import { TreePalm, Landmark, BarChart, Banknote, Settings, LifeBuoy, ChevronDown, BadgePercent, Building, Home, CreditCard, PiggyBank, PlusCircle, List, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { accounts, transactions as globalTransactions } from '@/lib/data';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Button } from './ui/button';
-import { Account } from '@/lib/types';
+import { Account, Transaction } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { formatCurrency } from '@/lib/utils';
 import { useMemo, useState, useEffect } from 'react';
@@ -21,8 +20,8 @@ const accountGroups = accounts.reduce((acc, account) => {
   return acc;
 }, {} as Record<string, Account[]>);
 
-const getAccountBalance = (accountId: string, transactions: typeof globalTransactions) => {
-    const accountTransactions = transactions.filter(t => t.accountId === accountId);
+const getAccountBalance = (accountId: string, transactions: Transaction[]) => {
+    const accountTransactions = transactions.filter(t => t.accountId === accountId && t.assignedTo === 'Walid');
     
     if (accountTransactions.length === 0) return 0;
     
@@ -113,6 +112,14 @@ export default function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname.startsWith('/budgets')}>
+              <Link href="/budgets">
+                <Briefcase />
+                <span>Budgets</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname.startsWith('/accounts')}>
               <Link href="/accounts">
                 <Banknote />
@@ -176,5 +183,3 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
-
-    

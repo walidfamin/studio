@@ -40,16 +40,15 @@ function parseFlexibleDate(dateString: string | number): Date | null {
         const parts = ds.split(/[\/\-\.]/);
         if (parts.length === 3) {
             let day, month, year;
-            if (parts[2].length === 4) { // yyyy-mm-dd or dd-mm-yyyy
-                if (parseInt(parts[0]) > 12) { // dd-mm-yyyy
-                    day = parseInt(parts[0]);
-                    month = parseInt(parts[1]) - 1;
-                    year = parseInt(parts[2]);
-                } else { // yyyy-mm-dd (likely) or mm-dd-yyyy
-                     year = parseInt(parts[0]);
-                     month = parseInt(parts[1]) - 1;
-                     day = parseInt(parts[2]);
-                }
+            // dd/MM/yyyy
+            if (parts[2].length === 4 && parseInt(parts[0]) <= 31 && parseInt(parts[1]) <= 12) {
+                day = parseInt(parts[0]);
+                month = parseInt(parts[1]) - 1;
+                year = parseInt(parts[2]);
+            } else if (parts[0].length === 4) { // yyyy-mm-dd (likely) or mm-dd-yyyy
+                 year = parseInt(parts[0]);
+                 month = parseInt(parts[1]) - 1;
+                 day = parseInt(parts[2]);
             } else { // dd-mm-yy
                 day = parseInt(parts[0]);
                 month = parseInt(parts[1]) - 1;
@@ -106,6 +105,8 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const [transferToAccount, setTransferToAccount] = useState<string>('');
     const [investmentId, setInvestmentId] = useState<string>('');
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
+    const [assignedTo, setAssignedTo] = useState<Transaction['assignedTo']>('Walid');
+
 
     useEffect(() => {
         const details = accounts.find(a => a.id === accountId);
@@ -141,11 +142,11 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             const dateB = parseFlexibleDate(b.date)?.getTime() || 0;
             return dateA - dateB;
         });
-
+        
         // The first transaction chronologically holds the starting balance.
-        const startBalance = sortedByDate[0].balance ?? 0;
+        const startBalance = sortedByDate[0]?.balance ?? 0;
         // The last transaction chronologically holds the ending balance.
-        const endBalance = sortedByDate[sortedByDate.length - 1].balance ?? 0;
+        const endBalance = sortedByDate[sortedByDate.length - 1]?.balance ?? 0;
 
         let inflow = 0;
         let outflow = 0;
@@ -190,11 +191,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     
     const processData = (data: any[][]) => {
         try {
-            if (accountDetails?.type === 'Credit Card') {
-                 processCreditCardStatement(data);
-            } else {
-                processStandardStatement(data);
-            }
+            processCreditCardStatement(data);
         } catch (error: any) {
              console.error("Import failed:", error);
             toast({
@@ -217,20 +214,32 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         return -1;
     };
 
-    const processStandardStatement = (data: any[][]) => {
-        // Assume headers are in the first row
+    const processCreditCardStatement = (data: any[][]) => {
         const headers = data[0].map(h => String(h).trim());
         const dateIndex = findHeaderIndex(headers, ['posting date', 'date']);
         const descIndex = findHeaderIndex(headers, ['description', 'narrative']);
         const debitIndex = findHeaderIndex(headers, ['debit', 'debit amount']);
         const creditIndex = findHeaderIndex(headers, ['credit', 'credit amount']);
         const balanceIndex = findHeaderIndex(headers, ['balance']);
-        
-        if (dateIndex === -1 || descIndex === -1 || (debitIndex === -1 && creditIndex === -1) || balanceIndex === -1) {
-            toast({
+
+        if (dateIndex === -1 || descIndex === -1 ) {
+             toast({
                 variant: "destructive",
                 title: "Import Error",
-                description: "Could not find required columns: Date, Description, Debit/Credit, Balance. Please use the template."
+                description: "Could not find required columns: Date, Description. Please use the template."
+            });
+            return;
+        }
+        
+        let hasAmount = debitIndex !== -1 || creditIndex !== -1;
+        let hasCrDr = findHeaderIndex(headers, ['cr/dr', 'crdr']) !== -1;
+
+
+        if (!hasAmount && !hasCrDr && accountDetails?.type === 'Credit Card') {
+             toast({
+                variant: "destructive",
+                title: "Import Error",
+                description: "Credit card statements need either Debit/Credit columns or Cr/Dr and Amount columns."
             });
             return;
         }
@@ -242,10 +251,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
             const dateStr = row[dateIndex];
             const description = row[descIndex];
-            const debit = row[debitIndex];
-            const credit = row[creditIndex];
-            const balance = row[balanceIndex];
-
+            
             if (!dateStr || !description) return null;
 
             const date = parseFlexibleDate(String(dateStr));
@@ -254,24 +260,56 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                  return null;
             }
 
-            const debitAmount = debit ? parseFloat(String(debit).replace(/,/g, '')) : 0;
-            const creditAmount = credit ? parseFloat(String(credit).replace(/,/g, '')) : 0;
-            const balanceAmount = balance ? parseFloat(String(balance).replace(/,/g, '')) : 0;
-            
-            if (isNaN(debitAmount) || isNaN(creditAmount) || isNaN(balanceAmount)) {
-                console.warn(`Invalid amount on row ${originalRowNumber}.`);
-                return null;
+            let amount = 0;
+            let type: 'income' | 'expense' = 'expense';
+            let category: Transaction['category'] = 'Uncategorized';
+            let balanceAmount: number | undefined = undefined;
+
+            if (balanceIndex !== -1 && row[balanceIndex] !== null && row[balanceIndex] !== '') {
+                balanceAmount = parseFloat(String(row[balanceIndex]).replace(/,/g, ''));
+                if (isNaN(balanceAmount)) balanceAmount = undefined;
             }
 
-            const amount = Math.abs(debitAmount) || Math.abs(creditAmount);
-            let type: 'income' | 'expense' = debitAmount > 0 ? 'expense' : 'income';
-            
+            if (debitIndex !== -1 || creditIndex !== -1) { // Standard statement with Debit/Credit columns
+                const debit = row[debitIndex] ? parseFloat(String(row[debitIndex]).replace(/,/g, '')) : 0;
+                const credit = row[creditIndex] ? parseFloat(String(row[creditIndex]).replace(/,/g, '')) : 0;
+                
+                if (isNaN(debit) || isNaN(credit)) {
+                    console.warn(`Invalid amount on row ${originalRowNumber}.`);
+                    return null;
+                }
+                amount = Math.abs(debit) || Math.abs(credit);
+                type = debit > 0 ? 'expense' : 'income';
+
+            } else { // Credit card specific format
+                const crDrIndex = findHeaderIndex(headers, ['cr/dr', 'crdr']);
+                const amountIndex = findHeaderIndex(headers, ['amount']);
+
+                if (crDrIndex === -1 || amountIndex === -1) return null; // Should be caught earlier, but for safety
+
+                const typeRaw = String(row[crDrIndex]).trim().toUpperCase();
+                const amountRaw = row[amountIndex];
+
+                amount = parseFloat(String(amountRaw).replace(/,/g, ''));
+                if (isNaN(amount)) {
+                    console.warn(`Invalid amount on row ${originalRowNumber}: '${amountRaw}'`);
+                    return null;
+                }
+
+                if (typeRaw === 'CR' || String(description).toLowerCase().includes('payment received')) {
+                    type = 'income';
+                    category = 'Credit Card Payment';
+                } else {
+                    type = 'expense';
+                }
+            }
+             
             // Handle cases where credit card payments might be listed as debits in a bank statement
-            let category: Transaction['category'] = 'Uncategorized';
             if (accountDetails?.type !== 'Credit Card' && String(description).toLowerCase().includes('credit card payment')) {
                 type = 'expense';
                 category = 'Credit Card Payment';
             }
+
 
             const transactionData = {
                 date: date.toISOString(),
@@ -281,6 +319,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 category: category,
                 accountId: accountId,
                 balance: balanceAmount,
+                assignedTo: 'Walid' as 'Walid', // Default assignment
             };
 
             return {
@@ -314,84 +353,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             initialTransactions.push(...otherAccountTransactions, ...existingThisAccountWithoutNew, ...newTransactions);
         });
 
-        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported or updated.` });
-    };
-
-    const processCreditCardStatement = (data: any[][]) => {
-        const rows = data.slice(1);
-        
-        const newTransactions = rows.map((row, index) => {
-            const originalRowNumber = index + 2;
-
-            if (!row || row.length < 4 || row.every(cell => cell === null || cell === "")) return null;
-
-            const [dateStr, description, crDr, amountStr] = row;
-            
-            if (!dateStr || !description || crDr === undefined || crDr === null || amountStr === undefined || amountStr === null) {
-                console.warn(`Skipping row ${originalRowNumber} due to missing data:`, row);
-                return null;
-            }
-
-            const date = parseFlexibleDate(String(dateStr));
-            if (!date) {
-                console.warn(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
-                return null;
-            }
-
-            const amount = parseFloat(String(amountStr).replace(/,/g, ''));
-            if (isNaN(amount)) {
-                console.warn(`Invalid amount on row ${originalRowNumber}: '${amountStr}'`);
-                return null;
-            }
-            
-            const descriptionStr = String(description).trim();
-            const typeRaw = String(crDr).trim().toUpperCase();
-            let type: 'income' | 'expense' = 'expense';
-            let category: Transaction['category'] = 'Uncategorized';
-            
-            if (typeRaw === 'CR' || descriptionStr.toLowerCase().includes('payment received')) {
-                type = 'income';
-                category = 'Credit Card Payment';
-            } else {
-                type = 'expense';
-            }
-
-            const transactionData = {
-                date: date.toISOString(),
-                description: descriptionStr,
-                amount: amount,
-                type: type,
-                category: category,
-                accountId: accountId,
-            };
-
-            return {
-                ...transactionData,
-                id: createTransactionId(transactionData)
-            } as Transaction;
-        }).filter((t): t is Transaction => t !== null);
-
-        if (newTransactions.length === 0) {
-            toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
-            return;
-        }
-
-        startTransition(() => {
-             const newTransactionIds = new Set(newTransactions.map(t => t.id));
-            
-            setTransactions(prev => {
-                const existingWithoutNew = prev.filter(t => !newTransactionIds.has(t.id));
-                const updated = [...existingWithoutNew, ...newTransactions];
-                return updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            });
-
-            const otherAccountTransactions = initialTransactions.filter(t => t.accountId !== accountId);
-            const thisAccountTransactions = initialTransactions.filter(t => t.accountId === accountId);
-            const existingThisAccountWithoutNew = thisAccountTransactions.filter(t => !newTransactionIds.has(t.id));
-
-            initialTransactions.length = 0;
-            initialTransactions.push(...otherAccountTransactions, ...existingThisAccountWithoutNew, ...newTransactions);
-        });
         toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported or updated.` });
     };
 
@@ -453,28 +414,27 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         let transferCreated = false;
 
         startTransition(() => {
-            setTransactions(prev => {
-                const newTransactions = prev.map(t => {
-                    const isMatchingTransaction = t.id === editingTransaction.id || 
-                        (applyToAll && t.description === editingTransaction.description && t.category === 'Uncategorized');
+            const updateLogic = (t: Transaction): Transaction => {
+                const isMatchingTransaction = t.id === editingTransaction.id || 
+                    (applyToAll && t.description === editingTransaction.description && t.category === 'Uncategorized');
 
-                    if (isMatchingTransaction) {
-                        if (t.category !== finalCategory) {
-                            updatedCount++;
-                        }
-                         const updatedTransaction = { ...t, category: finalCategory, investmentId: finalCategory === 'Investment' ? investmentId : undefined };
-                        
-                         // Also update in the global `initialTransactions`
-                         const globalIndex = initialTransactions.findIndex(it => it.id === t.id);
-                         if (globalIndex !== -1) {
-                            initialTransactions[globalIndex] = updatedTransaction;
-                         }
-
-                        return updatedTransaction;
+                if (isMatchingTransaction) {
+                    if (t.category !== finalCategory || t.assignedTo !== assignedTo) {
+                        updatedCount++;
                     }
-                    return t;
-                });
-                
+                    return { 
+                        ...t, 
+                        category: finalCategory,
+                        assignedTo: assignedTo,
+                        investmentId: finalCategory === 'Investment' ? investmentId : undefined 
+                    };
+                }
+                return t;
+            };
+
+            setTransactions(prev => {
+                const newTransactions = prev.map(updateLogic);
+
                 if (finalCategory === 'Transfer' && transferToAccount) {
                     const transferAmount = editingTransaction.amount;
                     const transferDescription = `Transfer from ${accountDetails.name}`;
@@ -486,6 +446,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                         type: 'income' as 'income',
                         category: 'Transfer' as 'Transfer',
                         accountId: transferToAccount,
+                        assignedTo: assignedTo,
                     };
 
                     const transferTransaction: Transaction = {
@@ -498,12 +459,18 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 
                 return newTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             });
+
+            // Also update in the global `initialTransactions`
+            const globalIndices = initialTransactions.map((t, i) => i);
+            for(const i of globalIndices) {
+                initialTransactions[i] = updateLogic(initialTransactions[i]);
+            }
         });
 
         handleCloseDialog();
         toast({
             title: "Transactions Updated",
-            description: `${updatedCount} transaction(s) have been categorized as "${finalCategory}". ${transferCreated ? 'Transfer created.' : ''}`.trim(),
+            description: `${updatedCount} transaction(s) have been updated. ${transferCreated ? 'Transfer created.' : ''}`.trim(),
         });
     };
     
@@ -514,6 +481,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setTransferToAccount('');
         setInvestmentId(transaction.investmentId || '');
         setApplyToAll(true);
+        setAssignedTo(transaction.assignedTo || 'Walid');
     };
 
     const handleCloseDialog = () => {
@@ -522,6 +490,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setCustomCategory('');
         setTransferToAccount('');
         setInvestmentId('');
+        setAssignedTo('Walid');
     }
 
   return (
@@ -711,6 +680,19 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                             </Select>
                         </div>
                     )}
+                    <div>
+                        <Label htmlFor="assigned-to">Assigned To</Label>
+                        <Select onValueChange={(v) => setAssignedTo(v as any)} defaultValue={assignedTo}>
+                            <SelectTrigger id="assigned-to">
+                                <SelectValue placeholder="Assign to..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Walid">Walid</SelectItem>
+                                <SelectItem value="Nathalie">Nathalie</SelectItem>
+                                <SelectItem value="Company">Company</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="flex items-center space-x-2">
                         <Checkbox 
                             id="apply-to-all" 
@@ -731,5 +713,3 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
-
-    

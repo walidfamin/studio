@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Area, AreaChart, Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -14,12 +13,12 @@ import {
   ChartContainer,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { transactions } from '@/lib/data';
+import { Transaction } from '@/lib/types';
 import { useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 
 
-export function TransactionsOverTime() {
+export function TransactionsOverTime({ transactions }: { transactions: Transaction[] }) {
 
   const chartData = useMemo(() => {
      const monthlyData: Record<string, { income: number; expenses: number; date: Date }> = {};

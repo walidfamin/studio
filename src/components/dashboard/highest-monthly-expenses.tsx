@@ -1,3 +1,4 @@
+
 'use client'
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -11,11 +12,11 @@ import {
   ChartContainer,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { transactions } from '@/lib/data';
+import { Transaction } from '@/lib/types';
 import { useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 
-export function HighestMonthlyExpenses() {
+export function HighestMonthlyExpenses({ transactions }: { transactions: Transaction[] }) {
   const chartData = useMemo(() => {
     const monthlyExpenses: Record<string, { expenses: number, date: Date }> = {};
     transactions.forEach(t => {

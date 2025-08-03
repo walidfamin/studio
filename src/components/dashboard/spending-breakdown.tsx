@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Pie, PieChart, Cell, Tooltip, ResponsiveContainer } from 'recharts';
@@ -16,7 +15,6 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { transactions } from '@/lib/data';
 import React from 'react';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -31,7 +29,7 @@ import { Transaction } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 
-export function SpendingBreakdown() {
+export function SpendingBreakdown({ transactions }: { transactions: Transaction[] }) {
   const [period, setPeriod] = React.useState('monthly');
   
   const chartData = React.useMemo(() => {

@@ -124,6 +124,39 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
         cell: ({ row }) => <div className="pl-4">{row.getValue("category")}</div>,
     },
     {
+      accessorKey: 'assignedTo',
+      header: 'Assigned To',
+      cell: ({ row, table }) => {
+        const transaction = row.original;
+        const currentAssignee = transaction.assignedTo || 'Walid';
+        
+        const handleAssigneeChange = (newAssignee: 'Walid' | 'Nathalie' | 'Company') => {
+          const allData = (table.options.data as Transaction[]);
+          const index = allData.findIndex(t => t.id === transaction.id);
+          if (index !== -1) {
+              const newData = [...allData];
+              newData[index] = { ...newData[index], assignedTo: newAssignee };
+              if (setData) {
+                  setData(newData);
+              }
+          }
+        }
+
+        return (
+          <Select onValueChange={handleAssigneeChange} defaultValue={currentAssignee}>
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue placeholder="Assign to" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Walid">Walid</SelectItem>
+              <SelectItem value="Nathalie">Nathalie</SelectItem>
+              <SelectItem value="Company">Company</SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      },
+    },
+    {
         accessorKey: 'type',
         header: 'Type',
         cell: ({ row }) => {
@@ -451,5 +484,3 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
     </div>
   );
 }
-
-    

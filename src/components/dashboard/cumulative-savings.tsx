@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -11,11 +12,11 @@ import {
   ChartContainer,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { transactions } from '@/lib/data';
+import { Transaction } from '@/lib/types';
 import { useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 
-export function CumulativeSavings() {
+export function CumulativeSavings({ transactions }: { transactions: Transaction[] }) {
   const chartData = useMemo(() => {
     const monthlyData: Record<string, { savings: number; date: Date }> = {};
 
