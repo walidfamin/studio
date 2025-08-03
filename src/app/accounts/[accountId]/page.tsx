@@ -23,38 +23,55 @@ import { Progress } from "@/components/ui/progress";
 
 
 function parseFlexibleDate(dateInput: string | number | Date): Date | null {
-  if (dateInput instanceof Date && isValid(dateInput)) {
-    return dateInput;
-  }
+    if (dateInput instanceof Date && isValid(dateInput)) {
+        return dateInput;
+    }
 
-  if (typeof dateInput === 'string') {
-    const formats = [
-      "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yy", "dd MMMM yyyy",
-      "dd-MM-yyyy", "MM-dd-yyyy", "yyyy/MM/dd", "dd.MM.yyyy", "MM.dd.yyyy",
-      "dd/MM/yy", "MM/dd/yy"
-    ];
+    if (typeof dateInput === 'string') {
+        const formats = [
+            "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yy", "dd MMMM yyyy",
+            "dd-MM-yyyy", "MM-dd-yyyy", "yyyy/MM/dd", "dd.MM.yyyy", "MM.dd.yyyy",
+            "dd/MM/yy", "MM/dd/yy"
+        ];
 
-    for (const fmt of formats) {
-      const parsedDate = parse(dateInput, fmt, new Date());
-      if (isValid(parsedDate)) {
-        // Correct for 2-digit years
-        if (fmt.includes('yy') && !fmt.includes('yyyy')) {
-            if (parsedDate.getFullYear() < 2000) {
-                parsedDate.setFullYear(parsedDate.getFullYear() + 100);
+        for (const fmt of formats) {
+            const parsedDate = parse(dateInput, fmt, new Date());
+            if (isValid(parsedDate)) {
+                // Correct for 2-digit years which date-fns defaults to 19xx
+                if (fmt.includes('yy') && !fmt.includes('yyyy')) {
+                    if (parsedDate.getFullYear() < 2000) {
+                        parsedDate.setFullYear(parsedDate.getFullYear() + 100);
+                    }
+                }
+                return parsedDate;
             }
         }
-        return parsedDate;
-      }
     }
-  }
 
-  // Fallback for native Date constructor and numeric values
-  const fallbackDate = new Date(dateInput);
-  if (isValid(fallbackDate)) {
-    return fallbackDate;
-  }
+    // Fallback for Excel's numeric date format or other numeric values
+    if (typeof dateInput === 'number' && dateInput > 0) {
+        // Excel's epoch starts on 1899-12-30, not 1970-01-01.
+        // The number represents days since epoch.
+        // We need to adjust for the difference in epochs and timezone offset.
+        const excelEpoch = new Date('1899-12-30');
+        const date = new Date(excelEpoch.getTime() + dateInput * 24 * 60 * 60 * 1000);
+        
+        // Adjust for timezone offset if necessary
+        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+        const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
 
-  return null;
+        if (isValid(adjustedDate)) {
+            return adjustedDate;
+        }
+    }
+
+    // Final fallback
+    const fallbackDate = new Date(dateInput);
+    if (isValid(fallbackDate)) {
+        return fallbackDate;
+    }
+
+    return null;
 }
 
 const createTransactionId = (t: Omit<Transaction, 'id'>): string => {
@@ -680,5 +697,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
+
+    
 
     
