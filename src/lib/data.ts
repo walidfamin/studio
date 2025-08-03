@@ -1,7 +1,7 @@
 
 import type { Transaction, Account, Investment } from './types';
 
-export const transactions: Transaction[] = [];
+export let transactions: Transaction[] = [];
 
 export const spendingData = [
   { month: 'Jan', income: 4000, expenses: 2200 },
@@ -61,4 +61,7 @@ export function addTransaction(transaction: Omit<Transaction, 'id' | 'date'> & {
     return newTransaction;
 }
 
+export function deleteTransactions(ids: string[]) {
+    transactions = transactions.filter(t => !ids.includes(t.id));
+}
     

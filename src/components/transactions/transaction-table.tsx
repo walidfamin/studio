@@ -34,19 +34,33 @@ import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
-import { ArrowUpDown, ChevronDown, Download, Edit } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Download, Edit, Trash2 } from 'lucide-react';
 import { AddTransactionSheet } from '../add-transaction-sheet';
 import { Checkbox } from '../ui/checkbox';
 import * as XLSX from 'xlsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { deleteTransactions } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-export function TransactionTable({ transactions, onEdit }: { transactions: Transaction[], onEdit?: (transaction: Transaction) => void }) {
+export function TransactionTable({ transactions, onEdit, setTransactions: setData }: { transactions: Transaction[], onEdit?: (transaction: Transaction) => void, setTransactions?: React.Dispatch<React.SetStateAction<Transaction[]>> }) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'date', desc: true },
   ]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const { toast } = useToast();
 
   const columns: ColumnDef<Transaction>[] = [
     {
@@ -180,6 +194,26 @@ export function TransactionTable({ transactions, onEdit }: { transactions: Trans
     XLSX.utils.book_append_sheet(workbook, worksheet, "Selected Transactions");
     XLSX.writeFile(workbook, "selected_transactions.xlsx");
   };
+
+  const handleDelete = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    if (selectedRows.length === 0) {
+      return;
+    }
+    const idsToDelete = selectedRows.map(row => row.original.id);
+    
+    if (setData) { // If it's a stateful component
+        setData(prev => prev.filter(t => !idsToDelete.includes(t.id)))
+    } else { // Fallback to mutating global data if not stateful
+        deleteTransactions(idsToDelete);
+    }
+    
+    table.resetRowSelection();
+    toast({
+        title: "Transactions Deleted",
+        description: `${idsToDelete.length} transaction(s) have been deleted.`,
+    })
+  };
   
   const selectedTotal = React.useMemo(() => {
     const selectedRows = table.getFilteredSelectedRowModel().rows;
@@ -296,6 +330,27 @@ export function TransactionTable({ transactions, onEdit }: { transactions: Trans
                     <Download className="mr-2 h-4 w-4"/>
                     Export Selected
                 </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Selected ({table.getFilteredSelectedRowModel().rows.length})
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the selected 
+                            {table.getFilteredSelectedRowModel().rows.length} transaction(s).
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
             )
           }
