@@ -1,7 +1,7 @@
 
 
 'use client';
-import { transactions, investments } from '@/lib/data';
+import { transactions, investments, accounts } from '@/lib/data';
 import { useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,7 +46,6 @@ export default function DashboardPage() {
       if (t.type === 'income' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
         income += t.amount;
       } else if (t.type === 'expense') {
-        // Exclude transfers and credit card payments from general expenses
         if (t.category === 'Investment') {
           investmentAmount += t.amount;
         } else if (t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
@@ -55,10 +54,21 @@ export default function DashboardPage() {
       }
     });
 
+    const totalStartingBalance = accounts.reduce((total, account) => {
+        const accountTransactions = walidTransactions
+            .filter(t => t.accountId === account.id && t.balance !== undefined && t.balance !== null)
+            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        if(accountTransactions.length > 0) {
+            return total + (accountTransactions[0].balance ?? 0);
+        }
+        return total;
+    }, 0);
+
     return {
       totalIncome: income,
       totalExpenses: expenses,
-      netSavings: income - expenses,
+      netSavings: totalStartingBalance + income - expenses,
       investmentsMade: investmentAmount,
     };
   }, [walidTransactions]);
