@@ -41,7 +41,7 @@ import { AddTransactionSheet } from '../add-transaction-sheet';
 import { Checkbox } from '../ui/checkbox';
 import * as XLSX from 'xlsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { deleteTransactions } from '@/lib/data';
+import { deleteTransactions, transactions as globalTransactions } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import {
     AlertDialog,
@@ -131,14 +131,23 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
         const currentAssignee = transaction.assignedTo || 'Walid';
         
         const handleAssigneeChange = (newAssignee: 'Walid' | 'Nathalie' | 'Company') => {
-          const allData = (table.options.data as Transaction[]);
-          const index = allData.findIndex(t => t.id === transaction.id);
-          if (index !== -1) {
-              const newData = [...allData];
-              newData[index] = { ...newData[index], assignedTo: newAssignee };
-              if (setData) {
-                  setData(newData);
-              }
+          // Update local state if setData is provided
+          if (setData) {
+            setData(prev => {
+                const index = prev.findIndex(t => t.id === transaction.id);
+                if (index !== -1) {
+                    const newData = [...prev];
+                    newData[index] = { ...newData[index], assignedTo: newAssignee };
+                    return newData;
+                }
+                return prev;
+            });
+          }
+          
+          // Also update the global state
+          const globalIndex = globalTransactions.findIndex(t => t.id === transaction.id);
+          if (globalIndex !== -1) {
+              globalTransactions[globalIndex].assignedTo = newAssignee;
           }
         }
 

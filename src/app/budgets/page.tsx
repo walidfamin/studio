@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { transactions } from '@/lib/data';
+import { useState, useMemo, useEffect } from 'react';
+import { transactions as globalTransactions } from '@/lib/data';
 import { Transaction } from '@/lib/types';
 import { SpendingBreakdown } from '@/components/dashboard/spending-breakdown';
 import { TransactionsOverTime } from '@/components/dashboard/transactions-over-time';
@@ -34,10 +34,23 @@ function StatCard({ title, value }: { title: string; value: string }) {
 
 export default function BudgetsPage() {
   const [selectedAssignee, setSelectedAssignee] = useState<Assignee>('Nathalie');
+  const [transactions, setTransactions] = useState(globalTransactions);
+
+  useEffect(() => {
+    // This is a simple way to listen for changes. In a real app, you'd use a state management library.
+    const interval = setInterval(() => {
+        const hasChanged = transactions.length !== globalTransactions.length || 
+            JSON.stringify(transactions) !== JSON.stringify(globalTransactions);
+      if (hasChanged) {
+        setTransactions([...globalTransactions]);
+      }
+    }, 500); // Check for changes
+    return () => clearInterval(interval);
+  }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => t.assignedTo === selectedAssignee);
-  }, [selectedAssignee]);
+  }, [selectedAssignee, transactions]);
 
   const { totalIncome, totalExpenses, netBalance } = useMemo(() => {
     let income = 0;
