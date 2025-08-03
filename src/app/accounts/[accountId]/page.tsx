@@ -22,27 +22,23 @@ import { SpendingByCategory } from "@/components/reports/spending-by-category";
 import { Progress } from "@/components/ui/progress";
 
 
-function parseFlexibleDate(dateString: string | number): Date | null {
-  if (typeof dateString === 'number' && dateString > 0) {
-    // Excel's epoch starts on 1899-12-30. The number represents days since then.
-    // JS Date epoch is 1970-01-01. The difference is 25569 days.
-    // However, Excel incorrectly thinks 1900 was a leap year. So we need to adjust.
-    // This is the correct way to handle Excel dates in JS.
-    const excelEpoch = new Date(1899, 11, 30);
-    const excelDate = new Date(excelEpoch.getTime() + dateString * 24 * 60 * 60 * 1000);
-     if (isValid(excelDate)) return excelDate;
+function parseFlexibleDate(dateInput: string | number | Date): Date | null {
+  if (dateInput instanceof Date) {
+    if (isValid(dateInput)) {
+        return dateInput;
+    }
   }
   
-  if (typeof dateString === 'string') {
+  if (typeof dateInput === 'string') {
     const commonFormats = [
         "dd/MM/yyyy", "dd-MM-yyyy", "dd.MM.yyyy",
         "MM/dd/yyyy", "MM-dd-yyyy", "MM.dd.yyyy",
         "yyyy-MM-dd", "yyyy/MM/dd", "yyyy.MM.dd",
-        "dd-MMM-yy", "dd MMMM yyyy"
+        "dd-MMM-yy", "dd MMMM yyyy", "MMMM d, yyyy"
     ];
 
     for (const fmt of commonFormats) {
-        const parsedDate = parse(dateString, fmt, new Date());
+        const parsedDate = parse(dateInput, fmt, new Date());
         if (isValid(parsedDate)) {
             return parsedDate;
         }
@@ -50,7 +46,7 @@ function parseFlexibleDate(dateString: string | number): Date | null {
   }
   
   // Fallback for native Date constructor (e.g., ISO strings)
-  const fallbackDate = new Date(dateString);
+  const fallbackDate = new Date(dateInput);
   if (isValid(fallbackDate)) {
       return fallbackDate;
   }
@@ -219,7 +215,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             
             if (!dateStr || !description) return null;
 
-            const date = parseFlexibleDate(String(dateStr));
+            const date = parseFlexibleDate(dateStr);
             if (!date) {
                  console.warn(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
                  return null;
@@ -335,7 +331,8 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+                // Use cellDates: true to let xlsx handle date parsing
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
