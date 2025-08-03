@@ -5,13 +5,13 @@ import { Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, S
 import { TreePalm, Landmark, BarChart, Banknote, Settings, LifeBuoy, ChevronDown, BadgePercent, Building, Home, CreditCard, PiggyBank, PlusCircle, List } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { accounts, transactions } from '@/lib/data';
+import { accounts, transactions as globalTransactions } from '@/lib/data';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Button } from './ui/button';
 import { Account } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { formatCurrency } from '@/lib/utils';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 const accountGroups = accounts.reduce((acc, account) => {
   if (!acc[account.bank]) {
@@ -21,24 +21,55 @@ const accountGroups = accounts.reduce((acc, account) => {
   return acc;
 }, {} as Record<string, Account[]>);
 
-const getAccountBalance = (accountId: string) => {
-    return transactions
-        .filter(t => t.accountId === accountId)
-        .reduce((acc, t) => {
-            if (t.type === 'income') return acc + t.amount;
-            if (t.type === 'expense') return acc - t.amount;
+const getAccountBalance = (accountId: string, transactions: typeof globalTransactions) => {
+    const accountTransactions = transactions.filter(t => t.accountId === accountId);
+    
+    if (accountTransactions.length === 0) return 0;
+    
+    const accountType = accounts.find(a => a.id === accountId)?.type;
+
+    if (accountType === 'Credit Card') {
+         return accountTransactions.reduce((acc, t) => {
+            if (t.type === 'expense') return acc + t.amount;
+            if (t.type === 'income' && t.category === 'Credit Card Payment') return acc - t.amount;
             return acc;
         }, 0);
+    }
+    
+    const statementTransactions = accountTransactions.filter(t => t.balance !== undefined);
+    if (statementTransactions.length > 0) {
+        const sortedByDate = [...statementTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return sortedByDate[sortedByDate.length - 1].balance ?? 0;
+    }
+
+    // Fallback for non-statement accounts
+    return accountTransactions.reduce((acc, t) => {
+        if (t.type === 'income') return acc + t.amount;
+        if (t.type === 'expense') return acc - t.amount;
+        return acc;
+    }, 0);
 };
 
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  // We use a local state to force re-renders when global data changes.
+  const [transactions, setTransactions] = useState(globalTransactions);
+
+  useEffect(() => {
+    // This is a simple way to listen for changes. In a real app, you'd use a state management library.
+    const interval = setInterval(() => {
+      if (transactions.length !== globalTransactions.length) {
+        setTransactions([...globalTransactions]);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [transactions]);
   
   const accountBalances = useMemo(() => {
     const balances: Record<string, number> = {};
     accounts.forEach(account => {
-        balances[account.id] = getAccountBalance(account.id);
+        balances[account.id] = getAccountBalance(account.id, transactions);
     });
     return balances;
   }, [transactions]);
@@ -145,3 +176,5 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
+
+    

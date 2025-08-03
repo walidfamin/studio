@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { parse, isValid } from 'date-fns';
+import { parse, isValid, fromUnixTime } from 'date-fns';
 import { Checkbox } from "@/components/ui/checkbox";
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { SpendingByCategory } from "@/components/reports/spending-by-category";
@@ -24,12 +24,13 @@ import { Progress } from "@/components/ui/progress";
 
 function parseFlexibleDate(dateString: string | number): Date | null {
   if (typeof dateString === 'number' && dateString > 0) {
-    const excelEpoch = new Date(1899, 11, 30);
-    return new Date(excelEpoch.getTime() + dateString * 86400000);
+    // Excel's epoch starts on 1899-12-30. The number represents days since then.
+    // JS Date epoch is 1970-01-01. The difference is 25569 days.
+    return new Date((dateString - 25569) * 86400000);
   }
   
   if (typeof dateString === 'string') {
-    const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'dd-MMM-yy', 'MM/dd/yyyy'];
+    const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'dd-MMM-yy', 'MM/dd/yyyy', "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"];
     for (const fmt of formats) {
         const parsedDate = parse(dateString, fmt, new Date());
         if (isValid(parsedDate)) {
@@ -71,28 +72,37 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     }, [accountId]);
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
-         if (!transactions || transactions.length === 0) {
-            return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
-        }
+        if (!transactions || transactions.length === 0) {
+           return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
+       }
 
-        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
-        const startBalance = sortedTransactions[0].balance ?? 0;
-        const endBalance = sortedTransactions[sortedTransactions.length - 1].balance ?? 0;
-        
-        let inflow = 0;
-        let outflow = 0;
+       const statementTransactions = transactions.filter(t => t.balance !== undefined);
+       if (statementTransactions.length === 0) {
+           return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
+       }
 
-        sortedTransactions.forEach(t => {
-            if (t.type === 'income') {
-                inflow += t.amount;
-            } else if (t.type === 'expense') {
-                outflow += t.amount;
-            }
-        });
+       const sortedByDate = [...statementTransactions].sort((a, b) => {
+           const dateA = parseFlexibleDate(a.date)?.getTime() || 0;
+           const dateB = parseFlexibleDate(b.date)?.getTime() || 0;
+           return dateA - dateB;
+       });
 
-        return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
-    }, [transactions]);
+       const startBalance = sortedByDate[0].balance ?? 0;
+       const endBalance = sortedByDate[sortedByDate.length - 1].balance ?? 0;
+
+       let inflow = 0;
+       let outflow = 0;
+
+       transactions.forEach(t => {
+           if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
+               inflow += t.amount;
+           } else if (t.type === 'expense' && t.category !== 'Transfer') {
+               outflow += t.amount;
+           }
+       });
+
+       return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
+   }, [transactions]);
     
     const creditCardLimit = 35200;
     const { creditCardBalance, totalLifetimeSpends } = useMemo(() => {
@@ -202,6 +212,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setTransactions(prev => {
             const nonImported = prev.filter(t => t.importId !== importId);
             const updatedTransactions = [...nonImported, ...newTransactions];
+            initialTransactions.push(...newTransactions);
             return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         });
         toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
@@ -217,14 +228,14 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
     const processStandardStatement = (data: any[][], importId: string) => {
         const headers = data[0].map(h => String(h).trim());
-        const dateIndex = findHeaderIndex(headers, ['Value Date', 'Date', 'Posting Date']);
-        const descIndex = findHeaderIndex(headers, ['Description', 'Narrative']);
-        const debitIndex = findHeaderIndex(headers, ['Debit', 'Debit Amount']);
-        const creditIndex = findHeaderIndex(headers, ['Credit', 'Credit Amount']);
-        const balanceIndex = findHeaderIndex(headers, ['Balance']);
+        const dateIndex = findHeaderIndex(headers, ['value date', 'date', 'posting date']);
+        const descIndex = findHeaderIndex(headers, ['description', 'narrative']);
+        const debitIndex = findHeaderIndex(headers, ['debit', 'debit amount']);
+        const creditIndex = findHeaderIndex(headers, ['credit', 'credit amount']);
+        const balanceIndex = findHeaderIndex(headers, ['balance']);
         
-        if (dateIndex === -1 || descIndex === -1 || debitIndex === -1 || creditIndex === -1 || balanceIndex === -1) {
-            throw new Error("Invalid file headers. Could not find required columns for Date, Description, Debit, Credit, and Balance.");
+        if (dateIndex === -1 || descIndex === -1 || (debitIndex === -1 && creditIndex === -1) || balanceIndex === -1) {
+            throw new Error("Invalid file headers. Could not find required columns. Ensure 'Date', 'Description', 'Debit'/'Credit', and 'Balance' columns exist.");
         }
 
         const rows = data.slice(1);
@@ -255,7 +266,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 return null;
             }
 
-            const amount = debitAmount || creditAmount;
+            const amount = Math.abs(debitAmount) || Math.abs(creditAmount);
             const type = debitAmount > 0 ? 'expense' : 'income';
             
             return {
@@ -280,6 +291,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             setTransactions(prev => {
                 const nonImported = prev.filter(t => t.importId !== importId);
                 const updatedTransactions = [...nonImported, ...newTransactions];
+                initialTransactions.push(...newTransactions);
                 return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             });
         });
@@ -354,6 +366,13 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                             updatedCount++;
                         }
                          const updatedTransaction = { ...t, category: finalCategory, investmentId: finalCategory === 'Investment' ? investmentId : undefined };
+                        
+                         // Also update in the global `initialTransactions`
+                         const globalIndex = initialTransactions.findIndex(it => it.id === t.id);
+                         if (globalIndex !== -1) {
+                            initialTransactions[globalIndex] = updatedTransaction;
+                         }
+
                         return updatedTransaction;
                     }
                     return t;
@@ -500,7 +519,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 <CardTitle>All Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-                 <TransactionTable transactions={transactions} onEdit={handleEditClick} />
+                 <TransactionTable transactions={transactions} onEdit={handleEditClick} setTransactions={setTransactions}/>
             </CardContent>
         </Card>
       </div>
@@ -610,3 +629,5 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
+
+    
