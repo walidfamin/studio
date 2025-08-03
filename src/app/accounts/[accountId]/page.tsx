@@ -230,7 +230,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
     const processStandardStatement = (data: any[][], importId: string) => {
         const headers = data[0].map(h => String(h).trim());
-        const dateIndex = findHeaderIndex(headers, ['value date', 'date', 'posting date']);
+        const dateIndex = findHeaderIndex(headers, ['posting date', 'date']);
         const descIndex = findHeaderIndex(headers, ['description', 'narrative']);
         const debitIndex = findHeaderIndex(headers, ['debit', 'debit amount']);
         const creditIndex = findHeaderIndex(headers, ['credit', 'credit amount']);
@@ -293,7 +293,11 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             setTransactions(prev => {
                 const nonImported = prev.filter(t => t.importId !== importId);
                 const updatedTransactions = [...nonImported, ...newTransactions];
-                initialTransactions.push(...newTransactions);
+                // Replace all existing transactions for this account in the global state
+                const otherAccountTransactions = initialTransactions.filter(t => t.accountId !== accountId);
+                initialTransactions.length = 0; // Clear the array
+                initialTransactions.push(...otherAccountTransactions, ...updatedTransactions); // Push new data
+
                 return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             });
         });
@@ -631,7 +635,5 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
-
-    
 
     
