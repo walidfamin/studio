@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -91,7 +92,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const [investmentId, setInvestmentId] = useState<string>('');
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
     const [assignedTo, setAssignedTo] = useState<Transaction['assignedTo']>('Walid');
-    const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
+    const [transactionType, setTransactionType] = useState<Transaction['type']>('expense');
 
 
     useEffect(() => {
@@ -160,7 +161,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             if (t.type === 'expense') {
                 balance += t.amount;
                 lifetimeSpends += t.amount;
-            } else if (t.type === 'income' && t.category === 'Credit Card Payment') {
+            } else if (t.type === 'income' || (t.type === 'transfer' && t.category === 'Credit Card Payment')) {
                 balance -= t.amount;
             }
         });
@@ -237,7 +238,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             }
 
             let amount = 0;
-            let type: 'income' | 'expense' = 'expense';
+            let type: Transaction['type'] = 'expense';
             let category: Transaction['category'] = 'Uncategorized';
             let balanceAmount: number | undefined = undefined;
 
@@ -284,7 +285,9 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 const lowerDesc = String(description).toLowerCase();
                 if (lowerDesc.includes('payment') || lowerDesc.includes('thank you') || lowerDesc.includes('trf')) {
                     category = 'Credit Card Payment';
-                    type = 'income'; // Payments to a CC are income *to that account* for balance sheet purposes
+                    // This is a payment TO the credit card, which reduces the balance. For calculation, it acts as "income" to the liability account.
+                    // To avoid user confusion, we'll mark it as a transfer type.
+                    type = 'transfer';
                 }
             }
 
@@ -593,6 +596,10 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="income" id="r-income" />
                                 <Label htmlFor="r-income" className="font-normal">Income</Label>
+                            </div>
+                             <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="transfer" id="r-transfer" />
+                                <Label htmlFor="r-transfer" className="font-normal">Transfer</Label>
                             </div>
                         </RadioGroup>
                     </div>

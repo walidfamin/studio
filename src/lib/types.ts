@@ -5,7 +5,7 @@ export type Transaction = {
   date: string;
   description: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   category: 'Food' | 'Transport' | 'Spends' | 'Investment' | 'Lifestyle' | 'Salary' | 'Rent/Mortgage' | 'Groceries' | 'Uncategorized' | 'Credit Card Payment' | 'Transfer' | 'Shopping' | 'DEWA' | 'Etisalat' | 'Du' | 'Travel' | 'Repair';
   accountId: string;
   assignedTo?: 'Walid' | 'Nathalie' | 'Company';

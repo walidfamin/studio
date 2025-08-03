@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import * as React from 'react';
@@ -170,7 +171,13 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
         header: 'Type',
         cell: ({ row }) => {
             const type = row.getValue('type') as string;
-            return <Badge variant={type === 'income' ? 'default' : 'secondary'}>{type}</Badge>
+            const category = row.original.category;
+            
+            if (category === 'Credit Card Payment') {
+                 return <Badge variant="outline">Transfer</Badge>
+            }
+            const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
+            return <Badge variant={type === 'income' ? 'default' : 'secondary'}>{capitalizedType}</Badge>
         }
     },
     {

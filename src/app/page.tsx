@@ -1,4 +1,5 @@
 
+
 'use client';
 import { transactions, investments } from '@/lib/data';
 import { useMemo } from 'react';
