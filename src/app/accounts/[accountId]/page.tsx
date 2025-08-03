@@ -280,9 +280,12 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 }
             }
              
-            if (accountDetails?.type === 'Credit Card' && String(description).toLowerCase().includes('payment')) {
-                category = 'Credit Card Payment';
-                type = 'income'; // Payments to a CC are income *to that account* for balance sheet purposes
+             if (accountDetails?.type === 'Credit Card') {
+                const lowerDesc = String(description).toLowerCase();
+                if (lowerDesc.includes('payment') || lowerDesc.includes('thank you') || lowerDesc.includes('trf')) {
+                    category = 'Credit Card Payment';
+                    type = 'income'; // Payments to a CC are income *to that account* for balance sheet purposes
+                }
             }
 
 
