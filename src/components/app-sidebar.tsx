@@ -20,28 +20,43 @@ const accountGroups = accounts.reduce((acc, account) => {
   return acc;
 }, {} as Record<string, Account[]>);
 
-const getAccountBalance = (accountId: string, transactions: Transaction[]) => {
+const getAccountBalance = (accountId: string, allTransactions: Transaction[]) => {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
-
-    const accountTransactions = transactions.filter(t => t.accountId === accountId);
     
-    // For accounts with statement imports, use the latest balance entry
-    const statementTransactions = accountTransactions.filter(t => t.balance !== undefined && t.balance !== null);
-    if (statementTransactions.length > 0) {
-        const sortedByDate = [...statementTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        return sortedByDate[sortedByDate.length - 1].balance ?? 0;
-    }
+    const accountTransactions = allTransactions
+        .filter(t => t.accountId === accountId)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Credit cards have a different balance calculation (liability)
     if (account.type === 'Credit Card') {
-         return accountTransactions.reduce((acc, t) => {
+        return accountTransactions.reduce((acc, t) => {
             if (t.type === 'expense') return acc + t.amount;
-            if (t.type === 'income' || (t.type === 'transfer' && t.category === 'Credit Card Payment')) return acc - t.amount;
+            // Payments reduce the balance (liability)
+            if (t.type === 'income' || t.category === 'Credit Card Payment') return acc - t.amount;
             return acc;
         }, 0);
     }
     
+    const statementTransactions = accountTransactions.filter(t => t.balance !== undefined && t.balance !== null);
+    
+    if (statementTransactions.length > 0) {
+        const lastStatementTx = statementTransactions[statementTransactions.length - 1];
+        let currentBalance = lastStatementTx.balance ?? 0;
+
+        const transactionsAfterLastStatement = allTransactions
+            .filter(t => t.accountId === accountId && new Date(t.date) > new Date(lastStatementTx.date))
+            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        transactionsAfterLastStatement.forEach(t => {
+             if (t.type === 'income') {
+                currentBalance += t.amount;
+            } else if (t.type === 'expense') {
+                currentBalance -= t.amount;
+            }
+        });
+        return currentBalance;
+    }
+
     // Fallback for non-statement accounts (e.g., manually added)
     return accountTransactions.reduce((acc, t) => {
         if (t.type === 'income') return acc + t.amount;
