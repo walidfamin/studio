@@ -53,9 +53,11 @@ function parseFlexibleDate(dateInput: string | number | Date): Date | null {
     }
 
     if (typeof dateInput === 'number' && dateInput > 0) {
+        // Excel date (serial number)
         const excelEpoch = new Date('1899-12-30');
         const date = new Date(excelEpoch.getTime() + dateInput * 24 * 60 * 60 * 1000);
         
+        // Adjust for timezone offset that might be introduced
         const userTimezoneOffset = date.getTimezoneOffset() * 60000;
         const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
 
@@ -105,39 +107,44 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     }, [accountId]);
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
-        const statementTransactions = transactions.filter(t => t.balance !== undefined && t.balance !== null);
+        const allAccountTransactions = transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const statementTransactions = allAccountTransactions.filter(t => t.balance !== undefined && t.balance !== null);
         
-        const sortedByDate = [...statementTransactions].sort((a, b) => {
-            const dateA = new Date(a.date).getTime() || 0;
-            const dateB = new Date(b.date).getTime() || 0;
-            return dateA - dateB;
-        });
-        
-        if (sortedByDate.length === 0) {
+        let startBalance = 0;
+        let finalBalance = 0;
+
+        if (statementTransactions.length > 0) {
+            const firstStatementTx = statementTransactions[0];
+            const lastStatementTx = statementTransactions[statementTransactions.length - 1];
+            
+            startBalance = firstStatementTx.balance ?? 0;
+            let currentBalance = lastStatementTx.balance ?? 0;
+
+            const transactionsAfterLastStatement = allAccountTransactions.filter(
+                t => new Date(t.date) > new Date(lastStatementTx.date)
+            );
+            
+            transactionsAfterLastStatement.forEach(t => {
+                 if (t.type === 'income') {
+                    currentBalance += t.amount;
+                } else if (t.type === 'expense') {
+                    currentBalance -= t.amount;
+                }
+            });
+            finalBalance = currentBalance;
+        } else {
             // Fallback for accounts without balance data (e.g., manually created)
             let balance = 0;
-            transactions.forEach(t => {
+            allAccountTransactions.forEach(t => {
                 if (t.type === 'income') {
                     balance += t.amount;
                 } else if (t.type === 'expense') {
                     balance -= t.amount;
                 }
             });
-            
-            const inflow = transactions
-                .filter(t => t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
-                .reduce((sum, t) => sum + t.amount, 0);
-
-            const outflow = transactions
-                .filter(t => t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
-                .reduce((sum, t) => sum + t.amount, 0);
-
-            return { accountBalance: balance, startingBalance: 0, totalInflow: inflow, totalOutflow: outflow };
+            finalBalance = balance;
         }
         
-        const startBalance = sortedByDate[0]?.balance ?? 0;
-        const endBalance = sortedByDate[sortedByDate.length - 1]?.balance ?? 0;
-
         const inflow = transactions
             .filter(t => t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
             .reduce((sum, t) => sum + t.amount, 0);
@@ -146,8 +153,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             .filter(t => t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment')
             .reduce((sum, t) => sum + t.amount, 0);
 
-
-        return { accountBalance: endBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
+        return { accountBalance: finalBalance, startingBalance: startBalance, totalInflow: inflow, totalOutflow: outflow };
     }, [transactions]);
     
     const creditCardLimit = 35200;
@@ -161,7 +167,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             if (t.type === 'expense') {
                 balance += t.amount;
                 lifetimeSpends += t.amount;
-            } else if (t.type === 'income' || (t.type === 'transfer' && t.category === 'Credit Card Payment')) {
+            } else if (t.type === 'income' || t.type === 'transfer' && (t.category === 'Credit Card Payment' || String(t.description).toLowerCase().includes('payment'))) {
                 balance -= t.amount;
             }
         });
@@ -285,8 +291,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 const lowerDesc = String(description).toLowerCase();
                 if (lowerDesc.includes('payment') || lowerDesc.includes('thank you') || lowerDesc.includes('trf')) {
                     category = 'Credit Card Payment';
-                    // This is a payment TO the credit card, which reduces the balance. For calculation, it acts as "income" to the liability account.
-                    // To avoid user confusion, we'll mark it as a transfer type.
                     type = 'transfer';
                 }
             }
