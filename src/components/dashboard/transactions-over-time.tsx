@@ -33,7 +33,7 @@ export function TransactionsOverTime({ transactions }: { transactions: Transacti
 
             if (t.type === 'income' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
                 monthlyData[monthKey].income += t.amount;
-            } else if (t.type === 'expense' && t.category !== 'Investment') {
+            } else if (t.type === 'expense' && t.category !== 'Investment' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
                 monthlyData[monthKey].expenses += t.amount;
             }
         });

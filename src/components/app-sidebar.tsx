@@ -21,13 +21,13 @@ const accountGroups = accounts.reduce((acc, account) => {
 }, {} as Record<string, Account[]>);
 
 const getAccountBalance = (accountId: string, transactions: Transaction[]) => {
+    const account = accounts.find(a => a.id === accountId);
+    if (!account) return 0;
+
     const accountTransactions = transactions.filter(t => t.accountId === accountId && t.assignedTo === 'Walid');
     
-    if (accountTransactions.length === 0) return 0;
-    
-    const accountType = accounts.find(a => a.id === accountId)?.type;
-
-    if (accountType === 'Credit Card') {
+    // Credit cards have a different balance calculation (liability)
+    if (account.type === 'Credit Card') {
          return accountTransactions.reduce((acc, t) => {
             if (t.type === 'expense') return acc + t.amount;
             if (t.type === 'income' && t.category === 'Credit Card Payment') return acc - t.amount;
@@ -35,13 +35,14 @@ const getAccountBalance = (accountId: string, transactions: Transaction[]) => {
         }, 0);
     }
     
-    const statementTransactions = accountTransactions.filter(t => t.balance !== undefined);
+    // For accounts with statement imports, use the latest balance entry
+    const statementTransactions = accountTransactions.filter(t => t.balance !== undefined && t.balance !== null);
     if (statementTransactions.length > 0) {
         const sortedByDate = [...statementTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         return sortedByDate[sortedByDate.length - 1].balance ?? 0;
     }
 
-    // Fallback for non-statement accounts
+    // Fallback for non-statement accounts (e.g., manually added)
     return accountTransactions.reduce((acc, t) => {
         if (t.type === 'income') return acc + t.amount;
         if (t.type === 'expense') return acc - t.amount;
@@ -58,10 +59,12 @@ export default function AppSidebar() {
   useEffect(() => {
     // This is a simple way to listen for changes. In a real app, you'd use a state management library.
     const interval = setInterval(() => {
-      if (transactions.length !== globalTransactions.length) {
+        const hasChanged = transactions.length !== globalTransactions.length || 
+            JSON.stringify(transactions) !== JSON.stringify(globalTransactions);
+      if (hasChanged) {
         setTransactions([...globalTransactions]);
       }
-    }, 1000);
+    }, 500); // Check more frequently
     return () => clearInterval(interval);
   }, [transactions]);
   
@@ -167,7 +170,7 @@ export default function AppSidebar() {
                     <Link key={account.id} href={`/accounts/${account.id}`}>
                       <div className={`flex justify-between items-center text-sidebar-foreground/70 rounded-md px-2 py-1 ${pathname === `/accounts/${account.id}` ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}`}>
                           <span>{account.name}</span>
-                          <span className={`font-mono ${balance < 0 ? 'text-red-400' : ''}`}>
+                          <span className={`font-mono ${balance < 0 || account.type === 'Credit Card' ? 'text-red-400' : ''}`}>
                               {formatCurrency(balance)}
                           </span>
                       </div>

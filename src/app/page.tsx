@@ -29,7 +29,7 @@ function StatCard({ title, value }: { title: string; value: string }) {
 export default function DashboardPage() {
   const walidTransactions = useMemo(() => {
     return transactions.filter(t => t.assignedTo === 'Walid');
-  }, [transactions]);
+  }, []);
 
   const {
     totalIncome,
@@ -45,9 +45,10 @@ export default function DashboardPage() {
       if (t.type === 'income' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
         income += t.amount;
       } else if (t.type === 'expense') {
+        // Exclude transfers and credit card payments from general expenses
         if (t.category === 'Investment') {
           investmentAmount += t.amount;
-        } else {
+        } else if (t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
           expenses += t.amount;
         }
       }

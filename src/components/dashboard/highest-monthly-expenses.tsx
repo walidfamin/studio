@@ -20,7 +20,7 @@ export function HighestMonthlyExpenses({ transactions }: { transactions: Transac
   const chartData = useMemo(() => {
     const monthlyExpenses: Record<string, { expenses: number, date: Date }> = {};
     transactions.forEach(t => {
-      if (t.type === 'expense' && t.category !== 'Investment') {
+      if (t.type === 'expense' && t.category !== 'Investment' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
         const date = new Date(t.date);
         const monthKey = date.toISOString().slice(0, 7);
         if (!monthlyExpenses[monthKey]) {

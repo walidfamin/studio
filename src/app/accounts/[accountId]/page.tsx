@@ -27,45 +27,21 @@ function parseFlexibleDate(dateString: string | number): Date | null {
     // Excel's epoch starts on 1899-12-30. The number represents days since then.
     // JS Date epoch is 1970-01-01. The difference is 25569 days.
     // However, Excel incorrectly thinks 1900 was a leap year. So we need to adjust.
-    if (dateString < 60) {
-      // It's 1900, but Excel thinks it's a leap year.
-      dateString = dateString - 1;
-    }
-    return new Date(Math.round((dateString - 25569) * 86400000));
+    // This is the correct way to handle Excel dates in JS.
+    const excelEpoch = new Date(1899, 11, 30);
+    const excelDate = new Date(excelEpoch.getTime() + dateString * 24 * 60 * 60 * 1000);
+     if (isValid(excelDate)) return excelDate;
   }
   
   if (typeof dateString === 'string') {
-    // Handle formats like "dd/MM/yyyy" or "dd-MM-yy" etc.
-    const flexibleParse = (ds: string) => {
-        const parts = ds.split(/[\/\-\.]/);
-        if (parts.length === 3) {
-            let day, month, year;
-            // dd/MM/yyyy
-            if (parts[2].length === 4 && parseInt(parts[0]) <= 31 && parseInt(parts[1]) <= 12) {
-                day = parseInt(parts[0]);
-                month = parseInt(parts[1]) - 1;
-                year = parseInt(parts[2]);
-            } else if (parts[0].length === 4) { // yyyy-mm-dd (likely) or mm-dd-yyyy
-                 year = parseInt(parts[0]);
-                 month = parseInt(parts[1]) - 1;
-                 day = parseInt(parts[2]);
-            } else { // dd-mm-yy
-                day = parseInt(parts[0]);
-                month = parseInt(parts[1]) - 1;
-                year = parseInt(parts[2]) > 70 ? 1900 + parseInt(parts[2]) : 2000 + parseInt(parts[2]);
-            }
-            const d = new Date(year, month, day);
-            if (isValid(d)) return d;
-        }
-        return null;
-    }
+    const commonFormats = [
+        "dd/MM/yyyy", "dd-MM-yyyy", "dd.MM.yyyy",
+        "MM/dd/yyyy", "MM-dd-yyyy", "MM.dd.yyyy",
+        "yyyy-MM-dd", "yyyy/MM/dd", "yyyy.MM.dd",
+        "dd-MMM-yy", "dd MMMM yyyy"
+    ];
 
-    const parsed = flexibleParse(dateString);
-    if(parsed) return parsed;
-    
-    // Fallback for other standard formats
-    const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'MM/dd/yyyy', 'dd-MMM-yy', "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"];
-    for (const fmt of formats) {
+    for (const fmt of commonFormats) {
         const parsedDate = parse(dateString, fmt, new Date());
         if (isValid(parsedDate)) {
             return parsedDate;
@@ -73,6 +49,7 @@ function parseFlexibleDate(dateString: string | number): Date | null {
     }
   }
   
+  // Fallback for native Date constructor (e.g., ISO strings)
   const fallbackDate = new Date(dateString);
   if (isValid(fallbackDate)) {
       return fallbackDate;
@@ -113,15 +90,21 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setAccountDetails(details);
         if (accountId) {
             const accountTransactions = initialTransactions.filter(t => t.accountId === accountId);
-            setTransactions(accountTransactions);
+            setTransactions(accountTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         }
     }, [accountId]);
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
         const statementTransactions = transactions.filter(t => t.balance !== undefined && t.balance !== null);
         
-        if (statementTransactions.length === 0) {
-            // Fallback for accounts without balance data (e.g., credit cards)
+        const sortedByDate = [...statementTransactions].sort((a, b) => {
+            const dateA = new Date(a.date).getTime() || 0;
+            const dateB = new Date(b.date).getTime() || 0;
+            return dateA - dateB;
+        });
+        
+        if (sortedByDate.length === 0) {
+            // Fallback for accounts without balance data (e.g., manually created)
             let balance = 0;
             let inflow = 0;
             let outflow = 0;
@@ -129,23 +112,15 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
                     inflow += t.amount;
                     balance += t.amount;
-                } else if (t.type === 'expense' && t.category !== 'Transfer') {
+                } else if (t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
                     outflow += t.amount;
                     balance -= t.amount;
                 }
             });
             return { accountBalance: balance, startingBalance: 0, totalInflow: inflow, totalOutflow: outflow };
         }
-
-        const sortedByDate = [...statementTransactions].sort((a, b) => {
-            const dateA = parseFlexibleDate(a.date)?.getTime() || 0;
-            const dateB = parseFlexibleDate(b.date)?.getTime() || 0;
-            return dateA - dateB;
-        });
         
-        // The first transaction chronologically holds the starting balance.
         const startBalance = sortedByDate[0]?.balance ?? 0;
-        // The last transaction chronologically holds the ending balance.
         const endBalance = sortedByDate[sortedByDate.length - 1]?.balance ?? 0;
 
         let inflow = 0;
@@ -154,7 +129,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         transactions.forEach(t => {
             if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
                 inflow += t.amount;
-            } else if (t.type === 'expense' && t.category !== 'Transfer') {
+            } else if (t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
                 outflow += t.amount;
             }
         });
@@ -191,6 +166,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     
     const processData = (data: any[][]) => {
         try {
+            // No need for separate logic anymore, use the credit card one as it's the most robust
             processCreditCardStatement(data);
         } catch (error: any) {
              console.error("Import failed:", error);
@@ -208,7 +184,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
 
     const findHeaderIndex = (headers: string[], possibleNames: string[]): number => {
         for (const name of possibleNames) {
-            const index = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+            const index = headers.findIndex(h => h && h.toLowerCase().includes(name.toLowerCase()));
             if (index !== -1) return index;
         }
         return -1;
@@ -231,19 +207,8 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             return;
         }
         
-        let hasAmount = debitIndex !== -1 || creditIndex !== -1;
-        let hasCrDr = findHeaderIndex(headers, ['cr/dr', 'crdr']) !== -1;
-
-
-        if (!hasAmount && !hasCrDr && accountDetails?.type === 'Credit Card') {
-             toast({
-                variant: "destructive",
-                title: "Import Error",
-                description: "Credit card statements need either Debit/Credit columns or Cr/Dr and Amount columns."
-            });
-            return;
-        }
-
+        let hasAmountCols = debitIndex !== -1 || creditIndex !== -1;
+        
         const rows = data.slice(1);
         const newTransactions = rows.map((row, index) => {
             const originalRowNumber = index + 2;
@@ -270,11 +235,11 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 if (isNaN(balanceAmount)) balanceAmount = undefined;
             }
 
-            if (debitIndex !== -1 || creditIndex !== -1) { // Standard statement with Debit/Credit columns
+            if (hasAmountCols) { // Standard statement with Debit/Credit columns
                 const debit = row[debitIndex] ? parseFloat(String(row[debitIndex]).replace(/,/g, '')) : 0;
                 const credit = row[creditIndex] ? parseFloat(String(row[creditIndex]).replace(/,/g, '')) : 0;
                 
-                if (isNaN(debit) || isNaN(credit)) {
+                if (isNaN(debit) && isNaN(credit)) {
                     console.warn(`Invalid amount on row ${originalRowNumber}.`);
                     return null;
                 }
@@ -307,6 +272,12 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             // Handle cases where credit card payments might be listed as debits in a bank statement
             if (accountDetails?.type !== 'Credit Card' && String(description).toLowerCase().includes('credit card payment')) {
                 type = 'expense';
+                category = 'Credit Card Payment';
+            }
+
+            // Always treat credit card payments as income to the credit card account itself for balance calculation
+             if (accountDetails?.type === 'Credit Card' && String(description).toLowerCase().includes('payment')) {
+                type = 'income';
                 category = 'Credit Card Payment';
             }
 
@@ -364,7 +335,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: file.name.endsWith('.csv') ? 'string' : 'binary', cellDates: true });
+                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
@@ -378,11 +349,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             toast({ variant: "destructive", title: "File Read Error", description: "Could not read the selected file." });
         };
         
-        if (file.name.endsWith('.csv')) {
-             reader.readAsText(file);
-        } else {
-            reader.readAsArrayBuffer(file);
-        }
+        reader.readAsArrayBuffer(file);
     };
 
     const handleSaveCategory = () => {

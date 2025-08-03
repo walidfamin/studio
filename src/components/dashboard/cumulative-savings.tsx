@@ -30,7 +30,7 @@ export function CumulativeSavings({ transactions }: { transactions: Transaction[
 
       if (t.type === 'income' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
         monthlyData[monthKey].savings += t.amount;
-      } else if (t.type === 'expense' && t.category !== 'Investment') {
+      } else if (t.type === 'expense' && t.category !== 'Investment' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
         monthlyData[monthKey].savings -= t.amount;
       }
     });

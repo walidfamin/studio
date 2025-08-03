@@ -37,7 +37,7 @@ export default function BudgetsPage() {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => t.assignedTo === selectedAssignee);
-  }, [transactions, selectedAssignee]);
+  }, [selectedAssignee]);
 
   const { totalIncome, totalExpenses } = useMemo(() => {
     let income = 0;
@@ -46,7 +46,7 @@ export default function BudgetsPage() {
     filteredTransactions.forEach(t => {
       if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
         income += t.amount;
-      } else if (t.type === 'expense' && t.category !== 'Transfer') {
+      } else if (t.type === 'expense' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment' && t.category !== 'Investment') {
         expenses += t.amount;
       }
     });
@@ -84,7 +84,7 @@ export default function BudgetsPage() {
       {filteredTransactions.length === 0 && (
         <div className="text-center text-muted-foreground py-16">
             <p>No transactions assigned to "{selectedAssignee}".</p>
-            <p className="text-sm">You can assign transactions from the main Transactions table.</p>
+            <p className="text-sm">You can assign transactions from the account details page.</p>
         </div>
       )}
     </div>
