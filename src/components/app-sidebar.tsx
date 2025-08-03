@@ -24,16 +24,7 @@ const getAccountBalance = (accountId: string, transactions: Transaction[]) => {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
 
-    const accountTransactions = transactions.filter(t => t.accountId === accountId && t.assignedTo === 'Walid');
-    
-    // Credit cards have a different balance calculation (liability)
-    if (account.type === 'Credit Card') {
-         return accountTransactions.reduce((acc, t) => {
-            if (t.type === 'expense') return acc + t.amount;
-            if (t.type === 'income' && t.category === 'Credit Card Payment') return acc - t.amount;
-            return acc;
-        }, 0);
-    }
+    const accountTransactions = transactions.filter(t => t.accountId === accountId);
     
     // For accounts with statement imports, use the latest balance entry
     const statementTransactions = accountTransactions.filter(t => t.balance !== undefined && t.balance !== null);
@@ -42,6 +33,15 @@ const getAccountBalance = (accountId: string, transactions: Transaction[]) => {
         return sortedByDate[sortedByDate.length - 1].balance ?? 0;
     }
 
+    // Credit cards have a different balance calculation (liability)
+    if (account.type === 'Credit Card') {
+         return accountTransactions.reduce((acc, t) => {
+            if (t.type === 'expense') return acc + t.amount;
+            if (t.type === 'income' || (t.type === 'transfer' && t.category === 'Credit Card Payment')) return acc - t.amount;
+            return acc;
+        }, 0);
+    }
+    
     // Fallback for non-statement accounts (e.g., manually added)
     return accountTransactions.reduce((acc, t) => {
         if (t.type === 'income') return acc + t.amount;
