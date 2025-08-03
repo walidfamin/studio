@@ -28,22 +28,31 @@ function parseFlexibleDate(dateInput: string | number | Date): Date | null {
     }
 
     if (typeof dateInput === 'string') {
-        const formats = [
-            "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yy", "dd MMMM yyyy",
-            "dd-MM-yyyy", "MM-dd-yyyy", "yyyy/MM/dd", "dd.MM.yyyy", "MM.dd.yyyy",
-            "dd/MM/yy", "MM/dd/yy"
-        ];
+        const parts = dateInput.split(/[-/.]/); // supports dd/MM/yy, dd-MM-yy, dd.MM.yy
+        if (parts.length === 3) {
+            let [day, month, year] = parts;
 
+            if (year.length === 2) {
+                const intYear = parseInt(year, 10);
+                year = (intYear <= 50 ? 2000 + intYear : 1900 + intYear).toString();
+            }
+            
+            // Rebuild date string to force proper parsing in a known format
+            const normalizedDateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            const parsed = new Date(normalizedDateStr);
+            if (isValid(parsed)) {
+                return parsed;
+            }
+        }
+
+        // Fallback for other string formats if the primary logic fails
+        const formats = [
+            "MM/dd/yyyy", "yyyy-MM-dd", "dd-MMM-yy", "dd MMMM yyyy",
+            "MM-dd-yyyy", "yyyy/MM/dd",
+        ];
         for (const fmt of formats) {
             const parsedDate = parse(dateInput, fmt, new Date());
             if (isValid(parsedDate)) {
-                // Correct for 2-digit years which date-fns defaults to 19xx
-                if (fmt.includes('yy') && !fmt.includes('yyyy')) {
-                    const year = getYear(parsedDate);
-                    if (year < 2000) { // Or a more robust check like `year < 50 ? 2000 + year : 1900 + year`
-                        parsedDate.setFullYear(year + 100);
-                    }
-                }
                 return parsedDate;
             }
         }
@@ -53,11 +62,9 @@ function parseFlexibleDate(dateInput: string | number | Date): Date | null {
     if (typeof dateInput === 'number' && dateInput > 0) {
         // Excel's epoch starts on 1899-12-30, not 1970-01-01.
         // The number represents days since epoch.
-        // We need to adjust for the difference in epochs and timezone offset.
         const excelEpoch = new Date('1899-12-30');
         const date = new Date(excelEpoch.getTime() + dateInput * 24 * 60 * 60 * 1000);
         
-        // Adjust for timezone offset if necessary
         const userTimezoneOffset = date.getTimezoneOffset() * 60000;
         const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
 
@@ -65,7 +72,7 @@ function parseFlexibleDate(dateInput: string | number | Date): Date | null {
             return adjustedDate;
         }
     }
-
+    
     // Final fallback
     const fallbackDate = new Date(dateInput);
     if (isValid(fallbackDate)) {
@@ -702,3 +709,4 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     
 
     
+
