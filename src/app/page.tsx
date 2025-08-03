@@ -43,7 +43,7 @@ export default function DashboardPage() {
     let investmentAmount = 0;
 
     walidTransactions.forEach(t => {
-      if (t.type === 'income' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
+      if (t.type === 'income' && t.category === 'Salary') {
         income += t.amount;
       } else if (t.type === 'expense') {
         if (t.category === 'Investment') {
