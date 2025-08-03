@@ -29,6 +29,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -182,6 +184,11 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
     }
   });
 
+  const categories = React.useMemo(() => {
+    const uniqueCategories = new Set(transactions.map(t => t.category));
+    return Array.from(uniqueCategories);
+  }, [transactions]);
+
   const handleExport = () => {
     const selectedRows = table.getFilteredSelectedRowModel().rows;
     if (selectedRows.length === 0) {
@@ -238,6 +245,32 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Category <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={!table.getColumn('category')?.getFilterValue()}
+                  onCheckedChange={() => table.getColumn('category')?.setFilterValue(undefined)}
+                >
+                  All
+                </DropdownMenuCheckboxItem>
+                {categories.map((category) => (
+                  <DropdownMenuCheckboxItem
+                    key={category}
+                    checked={table.getColumn('category')?.getFilterValue() === category}
+                    onCheckedChange={() => table.getColumn('category')?.setFilterValue(category)}
+                  >
+                    {category}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="ml-auto">
@@ -395,3 +428,5 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
     </div>
   );
 }
+
+    
