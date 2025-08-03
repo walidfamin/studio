@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { parse, isValid, fromUnixTime } from 'date-fns';
+import { parse, isValid, getYear } from 'date-fns';
 import { Checkbox } from "@/components/ui/checkbox";
 import { TransactionTable } from "@/components/transactions/transaction-table";
 import { SpendingByCategory } from "@/components/reports/spending-by-category";
@@ -39,8 +39,9 @@ function parseFlexibleDate(dateInput: string | number | Date): Date | null {
             if (isValid(parsedDate)) {
                 // Correct for 2-digit years which date-fns defaults to 19xx
                 if (fmt.includes('yy') && !fmt.includes('yyyy')) {
-                    if (parsedDate.getFullYear() < 2000) {
-                        parsedDate.setFullYear(parsedDate.getFullYear() + 100);
+                    const year = getYear(parsedDate);
+                    if (year < 2000) { // Or a more robust check like `year < 50 ? 2000 + year : 1900 + year`
+                        parsedDate.setFullYear(year + 100);
                     }
                 }
                 return parsedDate;
