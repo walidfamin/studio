@@ -39,7 +39,7 @@ export default function BudgetsPage() {
     return transactions.filter(t => t.assignedTo === selectedAssignee);
   }, [selectedAssignee]);
 
-  const { totalIncome, totalExpenses } = useMemo(() => {
+  const { totalIncome, totalExpenses, netBalance } = useMemo(() => {
     let income = 0;
     let expenses = 0;
 
@@ -51,7 +51,7 @@ export default function BudgetsPage() {
       }
     });
 
-    return { totalIncome: income, totalExpenses: expenses };
+    return { totalIncome: income, totalExpenses: expenses, netBalance: income - expenses };
   }, [filteredTransactions]);
 
   return (
@@ -71,9 +71,10 @@ export default function BudgetsPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard title="Total Income" value={formatCurrency(totalIncome)} />
         <StatCard title="Total Expenses" value={formatCurrency(totalExpenses)} />
+        <StatCard title="Net Balance" value={formatCurrency(netBalance)} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
