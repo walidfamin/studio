@@ -1,56 +1,59 @@
-
 'use client';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { investments } from '@/lib/data';
+import { investments, transactions } from '@/lib/data';
 import { formatCurrency } from '@/lib/utils';
-import { Landmark, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { Button } from '../ui/button';
 
 export function InvestmentOverview() {
-  const { totalValue, totalPaid } = useMemo(() => {
-    const totalValue = investments.reduce((sum, prop) => sum + prop.totalValue, 0);
-    // downPayment is the initial investment. paymentsMade includes the downpayment initially.
-    const totalPaid = investments.reduce((sum, prop) => sum + prop.paymentsMade, 0);
-    return { totalValue, totalPaid };
-  }, [investments]);
+  const investmentData = useMemo(() => {
+    return investments.map(investment => {
+      const totalPaid = transactions
+        .filter(t => t.investmentId === investment.id && t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+      return {
+        ...investment,
+        totalPaid,
+        // Assuming some placeholder total value for progress calculation
+        totalValue: totalPaid * 1.5,
+      };
+    });
+  }, [investments, transactions]);
 
-  const progressValue = totalValue > 0 ? (totalPaid / totalValue) * 100 : 0;
+  const totalInvested = investmentData.reduce((sum, inv) => sum + inv.totalPaid, 0);
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
-        <CardTitle className="text-lg font-headline flex items-center gap-2">
-            <Landmark className="w-5 h-5 text-accent" />
-            Investment Portfolio
+        <CardTitle className="text-lg font-headline">
+            Investments Overview
         </CardTitle>
-        <CardDescription>A summary of your total investments.</CardDescription>
+        <CardDescription>Total Invested: {formatCurrency(totalInvested)}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <p className="text-sm text-muted-foreground">Total Value</p>
-          <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Total Paid</p>
-          <p className="text-2xl font-bold">{formatCurrency(totalPaid)}</p>
-        </div>
-        <Progress value={progressValue} aria-label={`${progressValue.toFixed(0)}% of investments paid`} />
+        {investmentData.map(inv => (
+          <div key={inv.id}>
+             <div className="flex justify-between items-center mb-1">
+              <Link href={`/investments/${inv.id}`}>
+                <span className="font-medium hover:underline">{inv.name}</span>
+              </Link>
+              <span className="text-sm font-semibold">{formatCurrency(inv.totalPaid)}</span>
+            </div>
+            <Progress value={inv.totalValue > 0 ? (inv.totalPaid / inv.totalValue) * 100 : 0} />
+          </div>
+        ))}
+         {investmentData.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No investment payments have been allocated yet.</p>
+        )}
       </CardContent>
-      <CardFooter>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/investments">View All Investments</Link>
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

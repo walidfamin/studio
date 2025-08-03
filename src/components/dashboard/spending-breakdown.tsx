@@ -60,7 +60,7 @@ export function SpendingBreakdown() {
     });
 
      const spending = filteredTransactions
-            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer')
+            .filter(t => t.type === 'expense' && t.category !== 'Uncategorized' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer' && t.category !== 'Investment')
             .reduce((acc, t) => {
                 if (!acc[t.category]) {
                     acc[t.category] = { value: 0, fill: `hsl(var(--chart-${(Object.keys(acc).length % 5) + 1}))`};
@@ -86,11 +86,10 @@ export function SpendingBreakdown() {
     return (
         <Card className="h-full flex flex-col">
             <CardHeader>
-                 <CardTitle className="font-headline">Spending Breakdown</CardTitle>
-                 <CardDescription>Spending for this month.</CardDescription>
+                 <CardTitle className="font-headline">Expense Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex items-center justify-center">
-                 <div className="h-full bg-muted rounded-md flex items-center justify-center text-center p-4 w-full">
+                 <div className="h-full flex items-center justify-center text-center p-4 w-full">
                     <p className="text-muted-foreground">Categorize expense transactions to see the chart.</p>
                 </div>
             </CardContent>
@@ -102,8 +101,7 @@ export function SpendingBreakdown() {
     <Card className="h-full flex flex-col">
        <CardHeader className="flex flex-row items-center justify-between">
         <div>
-            <CardTitle className="font-headline">Spending Breakdown</CardTitle>
-            <CardDescription>Spending for this month.</CardDescription>
+            <CardTitle className="font-headline">Expense Breakdown</CardTitle>
         </div>
          <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -145,22 +143,6 @@ export function SpendingBreakdown() {
                         innerRadius={60}
                         outerRadius={100}
                         strokeWidth={5}
-                        labelLine={false}
-                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                            const RADIAN = Math.PI / 180;
-                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                            const category = chartData[index].category;
-
-                            if (percent < 0.05) return null; // Don't render label if it's too small
-
-                            return (
-                                <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-medium">
-                                    {(percent * 100).toFixed(0)}%
-                                </text>
-                            );
-                        }}
                     >
                         {chartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.fill} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" />
@@ -181,7 +163,6 @@ export function SpendingBreakdown() {
                 <div key={item.category} className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }}></span>
                     <span className="text-muted-foreground">{item.category}</span>
-                    <span className="font-medium">{formatCurrency(item.value)}</span>
                 </div>
             ))}
         </div>

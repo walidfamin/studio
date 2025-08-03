@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Area, AreaChart, Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import {
   Card,
   CardContent,
@@ -31,9 +32,9 @@ export function TransactionsOverTime() {
                  monthlyData[monthKey] = { date, income: 0, expenses: 0 };
             }
 
-            if (t.type === 'income' && t.category !== 'Credit Card Payment') {
+            if (t.type === 'income' && t.category !== 'Credit Card Payment' && t.category !== 'Transfer') {
                 monthlyData[monthKey].income += t.amount;
-            } else if (t.type === 'expense') {
+            } else if (t.type === 'expense' && t.category !== 'Investment') {
                 monthlyData[monthKey].expenses += t.amount;
             }
         });
@@ -51,28 +52,28 @@ export function TransactionsOverTime() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Cash Flow</CardTitle>
-        <CardDescription>Income vs. Expenses over time.</CardDescription>
+        <CardTitle className="font-headline">Income vs. Expenses</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={{}} className="min-h-[200px] w-full">
            <ResponsiveContainer width="100%" height={300}>
-            <AreaChart
+            <LineChart
               data={chartData}
               margin={{
                 top: 5,
                 right: 20,
-                left: 20,
+                left: 0,
                 bottom: 5,
               }}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${Number(value) / 1000}k AED`} />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${Number(value) / 1000}k`} hide />
               <Tooltip content={<ChartTooltipContent formatter={(value: number) => formatCurrency(value)} />} />
-              <Area type="monotone" dataKey="income" stackId="1" stroke="hsl(var(--chart-1))" fill="hsl(var(--chart-1))" fillOpacity={0.2} name="Income" />
-              <Area type="monotone" dataKey="expenses" stackId="1" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.2} name="Expenses"/>
-            </AreaChart>
+              <Legend />
+              <Line type="monotone" dataKey="income" stroke="hsl(var(--chart-1))" strokeWidth={2} name="Income" dot={false} />
+              <Line type="monotone" dataKey="expenses" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Expenses" dot={false} />
+            </LineChart>
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
