@@ -26,11 +26,46 @@ function parseFlexibleDate(dateString: string | number): Date | null {
   if (typeof dateString === 'number' && dateString > 0) {
     // Excel's epoch starts on 1899-12-30. The number represents days since then.
     // JS Date epoch is 1970-01-01. The difference is 25569 days.
-    return new Date((dateString - 25569) * 86400000);
+    // However, Excel incorrectly thinks 1900 was a leap year. So we need to adjust.
+    if (dateString < 60) {
+      // It's 1900, but Excel thinks it's a leap year.
+      dateString = dateString - 1;
+    }
+    return new Date(Math.round((dateString - 25569) * 86400000));
   }
   
   if (typeof dateString === 'string') {
-    const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'dd-MMM-yy', 'MM/dd/yyyy', "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"];
+    // Handle formats like "dd/MM/yyyy" or "dd-MM-yy" etc.
+    const flexibleParse = (ds: string) => {
+        const parts = ds.split(/[\/\-\.]/);
+        if (parts.length === 3) {
+            let day, month, year;
+            if (parts[2].length === 4) { // yyyy-mm-dd or dd-mm-yyyy
+                if (parseInt(parts[0]) > 12) { // dd-mm-yyyy
+                    day = parseInt(parts[0]);
+                    month = parseInt(parts[1]) - 1;
+                    year = parseInt(parts[2]);
+                } else { // yyyy-mm-dd (likely) or mm-dd-yyyy
+                     year = parseInt(parts[0]);
+                     month = parseInt(parts[1]) - 1;
+                     day = parseInt(parts[2]);
+                }
+            } else { // dd-mm-yy
+                day = parseInt(parts[0]);
+                month = parseInt(parts[1]) - 1;
+                year = parseInt(parts[2]) > 70 ? 1900 + parseInt(parts[2]) : 2000 + parseInt(parts[2]);
+            }
+            const d = new Date(year, month, day);
+            if (isValid(d)) return d;
+        }
+        return null;
+    }
+
+    const parsed = flexibleParse(dateString);
+    if(parsed) return parsed;
+    
+    // Fallback for other standard formats
+    const formats = ['dd/MM/yyyy', 'yyyy-MM-dd', 'MM/dd/yyyy', 'dd-MMM-yy', "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"];
     for (const fmt of formats) {
         const parsedDate = parse(dateString, fmt, new Date());
         if (isValid(parsedDate)) {
@@ -72,13 +107,23 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     }, [accountId]);
     
     const { accountBalance, startingBalance, totalInflow, totalOutflow } = useMemo(() => {
-        if (!transactions || transactions.length === 0) {
-            return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
-        }
-
-        const statementTransactions = transactions.filter(t => t.balance !== undefined);
+        const statementTransactions = transactions.filter(t => t.balance !== undefined && t.balance !== null);
+        
         if (statementTransactions.length === 0) {
-            return { accountBalance: 0, startingBalance: 0, totalInflow: 0, totalOutflow: 0 };
+            // Fallback for accounts without balance data (e.g., credit cards)
+            let balance = 0;
+            let inflow = 0;
+            let outflow = 0;
+            transactions.forEach(t => {
+                if (t.type === 'income' && t.category !== 'Transfer' && t.category !== 'Credit Card Payment') {
+                    inflow += t.amount;
+                    balance += t.amount;
+                } else if (t.type === 'expense' && t.category !== 'Transfer') {
+                    outflow += t.amount;
+                    balance -= t.amount;
+                }
+            });
+            return { accountBalance: balance, startingBalance: 0, totalInflow: inflow, totalOutflow: outflow };
         }
 
         const sortedByDate = [...statementTransactions].sort((a, b) => {
@@ -136,11 +181,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const processData = (data: any[][]) => {
         const importId = `import_${Date.now()}`;
         try {
-            if (accountDetails.type === 'Credit Card') {
-                processCreditCardStatement(data, importId);
-            } else {
-                processStandardStatement(data, importId);
-            }
+            processStandardStatement(data, importId);
         } catch (error: any) {
              console.error("Import failed:", error);
             toast({
@@ -153,6 +194,99 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                 fileInputRef.current.value = "";
             }
         }
+    };
+
+    const findHeaderIndex = (headers: string[], possibleNames: string[]): number => {
+        for (const name of possibleNames) {
+            const index = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+            if (index !== -1) return index;
+        }
+        return -1;
+    };
+
+    const processStandardStatement = (data: any[][], importId: string) => {
+        // Assume headers are in the first row
+        const headers = data[0].map(h => String(h).trim());
+        const dateIndex = findHeaderIndex(headers, ['posting date', 'date']);
+        const descIndex = findHeaderIndex(headers, ['description', 'narrative']);
+        const debitIndex = findHeaderIndex(headers, ['debit', 'debit amount']);
+        const creditIndex = findHeaderIndex(headers, ['credit', 'credit amount']);
+        const balanceIndex = findHeaderIndex(headers, ['balance']);
+        
+        if (dateIndex === -1 || descIndex === -1 || (debitIndex === -1 && creditIndex === -1) || balanceIndex === -1) {
+             // Fallback to credit card format if headers don't match
+            return processCreditCardStatement(data, importId);
+        }
+
+        const rows = data.slice(1);
+        const newTransactions = rows.map((row, index) => {
+            const originalRowNumber = index + 2;
+            if (!row || row.every(cell => cell === null || cell === "")) return null;
+
+            const dateStr = row[dateIndex];
+            const description = row[descIndex];
+            const debit = row[debitIndex];
+            const credit = row[creditIndex];
+            const balance = row[balanceIndex];
+
+            if (!dateStr || !description) return null;
+
+            const date = parseFlexibleDate(String(dateStr));
+            if (!date) {
+                 console.warn(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
+                 return null;
+            }
+
+            const debitAmount = debit ? parseFloat(String(debit).replace(/,/g, '')) : 0;
+            const creditAmount = credit ? parseFloat(String(credit).replace(/,/g, '')) : 0;
+            const balanceAmount = balance ? parseFloat(String(balance).replace(/,/g, '')) : 0;
+            
+            if (isNaN(debitAmount) || isNaN(creditAmount) || isNaN(balanceAmount)) {
+                console.warn(`Invalid amount on row ${originalRowNumber}.`);
+                return null;
+            }
+
+            const amount = Math.abs(debitAmount) || Math.abs(creditAmount);
+            let type: 'income' | 'expense' = debitAmount > 0 ? 'expense' : 'income';
+            
+            // Handle cases where credit card payments might be listed as debits in a bank statement
+            let category: Transaction['category'] = 'Uncategorized';
+            if (accountDetails?.type !== 'Credit Card' && String(description).toLowerCase().includes('credit card payment')) {
+                type = 'expense';
+                category = 'Credit Card Payment';
+            }
+
+            return {
+                id: `tx_${Date.now()}_${index}`,
+                date: date.toISOString(),
+                description: String(description).trim(),
+                amount: amount,
+                type: type,
+                category: category,
+                accountId: accountId,
+                importId: importId,
+                balance: balanceAmount,
+            } as Transaction;
+        }).filter((t): t is Transaction => t !== null);
+        
+         if (newTransactions.length === 0) {
+            toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
+            return;
+        }
+
+        startTransition(() => {
+            setTransactions(prev => {
+                const nonImported = prev.filter(t => t.importId !== importId);
+                const updatedTransactions = [...nonImported, ...newTransactions];
+                // Replace all existing transactions for this account in the global state
+                const otherAccountTransactions = initialTransactions.filter(t => t.accountId !== accountId);
+                initialTransactions.length = 0; // Clear the array
+                initialTransactions.push(...otherAccountTransactions, ...updatedTransactions); // Push new data
+
+                return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            });
+        });
+        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
     };
 
     const processCreditCardStatement = (data: any[][], importId: string) => {
@@ -216,90 +350,6 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
             const updatedTransactions = [...nonImported, ...newTransactions];
             initialTransactions.push(...newTransactions);
             return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        });
-        toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
-    };
-
-    const findHeaderIndex = (headers: string[], possibleNames: string[]): number => {
-        for (const name of possibleNames) {
-            const index = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
-            if (index !== -1) return index;
-        }
-        return -1;
-    };
-
-    const processStandardStatement = (data: any[][], importId: string) => {
-        const headers = data[0].map(h => String(h).trim());
-        const dateIndex = findHeaderIndex(headers, ['posting date', 'date']);
-        const descIndex = findHeaderIndex(headers, ['description', 'narrative']);
-        const debitIndex = findHeaderIndex(headers, ['debit', 'debit amount']);
-        const creditIndex = findHeaderIndex(headers, ['credit', 'credit amount']);
-        const balanceIndex = findHeaderIndex(headers, ['balance']);
-        
-        if (dateIndex === -1 || descIndex === -1 || (debitIndex === -1 && creditIndex === -1) || balanceIndex === -1) {
-            throw new Error("Invalid file headers. Could not find required columns. Ensure 'Date', 'Description', 'Debit'/'Credit', and 'Balance' columns exist.");
-        }
-
-        const rows = data.slice(1);
-        const newTransactions = rows.map((row, index) => {
-            const originalRowNumber = index + 2;
-            if (!row || row.every(cell => cell === null || cell === "")) return null;
-
-            const dateStr = row[dateIndex];
-            const description = row[descIndex];
-            const debit = row[debitIndex];
-            const credit = row[creditIndex];
-            const balance = row[balanceIndex];
-
-            if (!dateStr || !description) return null;
-
-            const date = parseFlexibleDate(dateStr);
-            if (!date) {
-                 console.warn(`Invalid date on row ${originalRowNumber}: '${dateStr}'`);
-                 return null;
-            }
-
-            const debitAmount = debit ? parseFloat(String(debit).replace(/,/g, '')) : 0;
-            const creditAmount = credit ? parseFloat(String(credit).replace(/,/g, '')) : 0;
-            const balanceAmount = balance ? parseFloat(String(balance).replace(/,/g, '')) : 0;
-            
-            if (isNaN(debitAmount) || isNaN(creditAmount) || isNaN(balanceAmount)) {
-                console.warn(`Invalid amount on row ${originalRowNumber}.`);
-                return null;
-            }
-
-            const amount = Math.abs(debitAmount) || Math.abs(creditAmount);
-            const type = debitAmount > 0 ? 'expense' : 'income';
-            
-            return {
-                id: `tx_${Date.now()}_${index}`,
-                date: date.toISOString(),
-                description: String(description).trim(),
-                amount: amount,
-                type: type,
-                category: 'Uncategorized',
-                accountId: accountId,
-                importId: importId,
-                balance: balanceAmount,
-            } as Transaction;
-        }).filter((t): t is Transaction => t !== null);
-        
-         if (newTransactions.length === 0) {
-            toast({ variant: "destructive", title: "Import Error", description: "The selected file is empty or does not contain valid data." });
-            return;
-        }
-
-        startTransition(() => {
-            setTransactions(prev => {
-                const nonImported = prev.filter(t => t.importId !== importId);
-                const updatedTransactions = [...nonImported, ...newTransactions];
-                // Replace all existing transactions for this account in the global state
-                const otherAccountTransactions = initialTransactions.filter(t => t.accountId !== accountId);
-                initialTransactions.length = 0; // Clear the array
-                initialTransactions.push(...otherAccountTransactions, ...updatedTransactions); // Push new data
-
-                return updatedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            });
         });
         toast({ title: "Import Successful", description: `${newTransactions.length} transaction(s) have been imported.` });
     };
@@ -568,6 +618,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                                         <SelectItem value="Groceries">Groceries</SelectItem>
                                         <SelectItem value="Transfer">Transfer</SelectItem>
                                         <SelectItem value="Investment">Investment</SelectItem>
+                                        <SelectItem value="Credit Card Payment">Credit Card Payment</SelectItem>
                                     </>
                                 )}
                                 <SelectItem value="Other">Other (Custom)</SelectItem>
@@ -635,5 +686,3 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     </div>
   )
 }
-
-    
