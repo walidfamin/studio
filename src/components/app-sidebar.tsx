@@ -5,12 +5,13 @@ import { Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, S
 import { TreePalm, Landmark, BarChart, Banknote, Settings, LifeBuoy, ChevronDown, BadgePercent, Building, Home, CreditCard, PiggyBank, PlusCircle, List } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { accounts } from '@/lib/data';
+import { accounts, transactions } from '@/lib/data';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Button } from './ui/button';
 import { Account } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { formatCurrency } from '@/lib/utils';
+import { useMemo } from 'react';
 
 const accountGroups = accounts.reduce((acc, account) => {
   if (!acc[account.bank]) {
@@ -20,9 +21,28 @@ const accountGroups = accounts.reduce((acc, account) => {
   return acc;
 }, {} as Record<string, Account[]>);
 
+const getAccountBalance = (accountId: string) => {
+    return transactions
+        .filter(t => t.accountId === accountId)
+        .reduce((acc, t) => {
+            if (t.type === 'income') return acc + t.amount;
+            if (t.type === 'expense') return acc - t.amount;
+            return acc;
+        }, 0);
+};
+
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  
+  const accountBalances = useMemo(() => {
+    const balances: Record<string, number> = {};
+    accounts.forEach(account => {
+        balances[account.id] = getAccountBalance(account.id);
+    });
+    return balances;
+  }, [transactions]);
+
 
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="group-data-[variant=sidebar]:border-r">
@@ -103,16 +123,19 @@ export default function AppSidebar() {
                 </Tooltip>
               </div>
               <CollapsibleContent className="pl-8 pr-2 py-1 space-y-1 text-sm">
-                {accounts.map(account => (
-                  <Link key={account.id} href={`/accounts/${account.id}`}>
-                    <div className={`flex justify-between items-center text-sidebar-foreground/70 rounded-md px-2 py-1 ${pathname === `/accounts/${account.id}` ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}`}>
-                        <span>{account.name}</span>
-                        <span className={`font-mono ${account.balance < 0 ? 'text-red-400' : ''}`}>
-                            {formatCurrency(account.balance)}
-                        </span>
-                    </div>
-                  </Link>
-                ))}
+                {accounts.map(account => {
+                  const balance = accountBalances[account.id] || 0;
+                  return (
+                    <Link key={account.id} href={`/accounts/${account.id}`}>
+                      <div className={`flex justify-between items-center text-sidebar-foreground/70 rounded-md px-2 py-1 ${pathname === `/accounts/${account.id}` ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}`}>
+                          <span>{account.name}</span>
+                          <span className={`font-mono ${balance < 0 ? 'text-red-400' : ''}`}>
+                              {formatCurrency(balance)}
+                          </span>
+                      </div>
+                    </Link>
+                  )
+                })}
               </CollapsibleContent>
             </Collapsible>
           ))}
