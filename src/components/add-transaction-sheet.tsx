@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -31,7 +32,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { accounts, addTransaction, investments } from '@/lib/data';
 import { useForm, Controller } from 'react-hook-form';
@@ -43,12 +44,13 @@ const formSchema = z.object({
     accountId: z.string({ required_error: 'Please select an account.' }).min(1, "Please select an account."),
     description: z.string().min(1, 'Description is required.'),
     amount: z.coerce.number().positive('Amount must be a positive number.'),
-    type: z.enum(['income', 'expense']),
+    type: z.enum(['income', 'expense', 'transfer']),
     date: z.date(),
     category: z.string().min(1, 'Category is required.'),
     customCategory: z.string().optional(),
     investmentId: z.string().optional(),
     assignedTo: z.enum(['Walid', 'Nathalie', 'Company']),
+    walidShare: z.coerce.number().optional(),
 }).refine(data => {
     if (data.category === 'Other' && !data.customCategory) {
         return false;
@@ -75,11 +77,14 @@ export function AddTransactionSheet() {
       customCategory: '',
       investmentId: '',
       assignedTo: 'Walid',
+      walidShare: undefined,
     },
   });
   
   const selectedAccountId = form.watch('accountId');
   const selectedCategory = form.watch('category');
+  const transactionType = form.watch('type');
+  const transactionAmount = form.watch('amount');
   const account = accounts.find(a => a.id === selectedAccountId);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
@@ -197,12 +202,37 @@ export function AddTransactionSheet() {
                                     </FormControl>
                                     <FormLabel htmlFor="r2" className="font-normal">Income</FormLabel>
                                 </FormItem>
+                                <FormItem className="flex items-center space-x-2">
+                                    <FormControl>
+                                        <RadioGroupItem value="transfer" id="r3" />
+                                    </FormControl>
+                                    <FormLabel htmlFor="r3" className="font-normal">Transfer</FormLabel>
+                                </FormItem>
                                 </RadioGroup>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
+
+                {transactionType === 'income' && (
+                    <FormField
+                        control={form.control}
+                        name="walidShare"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Walid's Share (AED)</FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        type="number" 
+                                        placeholder={`Portion of ${formatCurrency(transactionAmount || 0)}`}
+                                        {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
 
                 <FormField
                     control={form.control}

@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     const [applyToAll, setApplyToAll] = useState<boolean>(true);
     const [assignedTo, setAssignedTo] = useState<Transaction['assignedTo']>('Walid');
     const [transactionType, setTransactionType] = useState<Transaction['type']>('expense');
+    const [walidShare, setWalidShare] = useState<string>('');
 
 
     useEffect(() => {
@@ -408,7 +410,8 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                         type: transactionType,
                         category: finalCategory,
                         assignedTo: assignedTo,
-                        investmentId: finalCategory === 'Investment' ? investmentId : undefined 
+                        investmentId: finalCategory === 'Investment' ? investmentId : undefined,
+                        walidShare: transactionType === 'income' ? parseFloat(walidShare) || undefined : undefined
                     };
                 }
                 return t;
@@ -465,6 +468,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setInvestmentId(transaction.investmentId || '');
         setApplyToAll(true);
         setAssignedTo(transaction.assignedTo || 'Walid');
+        setWalidShare(transaction.walidShare?.toString() || '');
     };
 
     const handleCloseDialog = () => {
@@ -474,6 +478,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
         setTransferToAccount('');
         setInvestmentId('');
         setAssignedTo('Walid');
+        setWalidShare('');
     }
 
   return (
@@ -607,6 +612,18 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
                             </div>
                         </RadioGroup>
                     </div>
+                    {transactionType === 'income' && (
+                        <div>
+                            <Label htmlFor="walid-share">Walid's Share (AED)</Label>
+                            <Input 
+                                id="walid-share" 
+                                type="number"
+                                placeholder={`e.g., portion of ${formatCurrency(editingTransaction?.amount || 0)}`}
+                                value={walidShare}
+                                onChange={(e) => setWalidShare(e.target.value)}
+                            />
+                        </div>
+                    )}
                     <div>
                         <Label htmlFor="category">Category</Label>
                         <Select onValueChange={(value) => setSelectedCategory(value as any)} defaultValue={selectedCategory}>

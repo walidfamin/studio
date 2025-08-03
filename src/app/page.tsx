@@ -1,5 +1,6 @@
 
 
+
 'use client';
 import { transactions, investments, accounts } from '@/lib/data';
 import { useMemo } from 'react';
@@ -44,7 +45,7 @@ export default function DashboardPage() {
 
     walidTransactions.forEach(t => {
       if (t.type === 'income' && t.category === 'Salary') {
-        income += t.amount;
+         income += t.walidShare ?? t.amount;
       } else if (t.type === 'expense') {
         if (t.category === 'Investment') {
           investmentAmount += t.amount;
