@@ -132,23 +132,20 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
         const currentAssignee = transaction.assignedTo || 'Walid';
         
         const handleAssigneeChange = (newAssignee: 'Walid' | 'Nathalie' | 'Company') => {
-          // Update local state if setData is provided
+          const updateTransaction = (t: Transaction) => {
+            if (t.id === transaction.id) {
+              return { ...t, assignedTo: newAssignee };
+            }
+            return t;
+          };
+
           if (setData) {
-            setData(prev => {
-                const index = prev.findIndex(t => t.id === transaction.id);
-                if (index !== -1) {
-                    const newData = [...prev];
-                    newData[index] = { ...newData[index], assignedTo: newAssignee };
-                    return newData;
-                }
-                return prev;
-            });
+            setData(prev => prev.map(updateTransaction));
           }
           
-          // Also update the global state
           const globalIndex = globalTransactions.findIndex(t => t.id === transaction.id);
           if (globalIndex !== -1) {
-              globalTransactions[globalIndex].assignedTo = newAssignee;
+              globalTransactions[globalIndex] = updateTransaction(globalTransactions[globalIndex]);
           }
         }
 
@@ -267,6 +264,11 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
   const handleExport = () => {
     const selectedRows = table.getFilteredSelectedRowModel().rows;
     if (selectedRows.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No rows selected",
+            description: "Please select at least one row to export.",
+        });
         return;
     }
     const dataToExport = selectedRows.map(row => row.original);
@@ -284,10 +286,9 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
     }
     const idsToDelete = selectedRows.map(row => row.original.id);
     
-    if (setData) { // If it's a stateful component
+    deleteTransactions(idsToDelete);
+    if(setData){
         setData(prev => prev.filter(t => !idsToDelete.includes(t.id)))
-    } else { // Fallback to mutating global data if not stateful
-        deleteTransactions(idsToDelete);
     }
     
     table.resetRowSelection();
@@ -302,7 +303,7 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
     return selectedRows.reduce((total, row) => {
         const amount = parseFloat(row.getValue('amount'));
         const type = row.original.type;
-        const value = type === 'expense' ? -amount : amount;
+        const value = type === 'expense' ? -amount : (type === 'income' ? amount : 0);
         return total + value;
     }, 0);
   }, [rowSelection, table]);
@@ -329,17 +330,17 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
                 <DropdownMenuContent>
                     <DropdownMenuLabel>Filter by Assignee</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                     <DropdownMenuCheckboxItem
-                        checked={!table.getColumn('assignedTo')?.getFilterValue()}
-                        onCheckedChange={() => table.getColumn('assignedTo')?.setFilterValue(undefined)}
-                        >
-                        All
-                        </DropdownMenuCheckboxItem>
-                    {['Walid', 'Nathalie', 'Company'].map((assignee) => (
+                     {['All', 'Walid', 'Nathalie', 'Company'].map((assignee) => (
                     <DropdownMenuCheckboxItem
                         key={assignee}
-                        checked={table.getColumn('assignedTo')?.getFilterValue() === assignee}
-                        onCheckedChange={() => table.getColumn('assignedTo')?.setFilterValue(assignee)}
+                        checked={
+                            assignee === 'All'
+                            ? !table.getColumn('assignedTo')?.getFilterValue()
+                            : table.getColumn('assignedTo')?.getFilterValue() === assignee
+                        }
+                        onCheckedChange={() => 
+                            table.getColumn('assignedTo')?.setFilterValue(assignee === 'All' ? undefined : assignee)
+                        }
                     >
                         {assignee}
                     </DropdownMenuCheckboxItem>
@@ -453,7 +454,7 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
       </div>
       <div className="flex items-center justify-between space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+          {table.getFilteredSelectedRowModel().rows.length > 0 ? (
             <div className="flex items-center gap-4">
                 <span>
                     {table.getFilteredSelectedRowModel().rows.length} of{' '}
@@ -486,7 +487,7 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
                     </AlertDialogContent>
                 </AlertDialog>
             </div>
-            )
+            ) : <div className="h-10"></div>
           }
         </div>
         <div className="flex items-center space-x-2">
@@ -529,3 +530,5 @@ export function TransactionTable({ transactions, onEdit, setTransactions: setDat
     </div>
   );
 }
+
+    
