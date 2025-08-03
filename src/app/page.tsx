@@ -58,7 +58,7 @@ export default function DashboardPage() {
     return {
       totalIncome: income,
       totalExpenses: expenses,
-      netSavings: income - expenses - investmentAmount,
+      netSavings: income - expenses,
       investmentsMade: investmentAmount,
     };
   }, [walidTransactions]);
