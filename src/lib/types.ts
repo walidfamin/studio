@@ -1,6 +1,5 @@
 
 
-
 export type Transaction = {
   id: string;
   date: string;
@@ -38,4 +37,11 @@ export type Installment = {
 export type Investment = {
   id: string;
   name: string;
+};
+
+export type UpcomingPayment = {
+  id: string;
+  date: string; // ISO 8601 format
+  name: string;
+  status: 'Upcoming' | 'Scheduled' | 'Paid';
 };

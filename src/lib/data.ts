@@ -1,5 +1,5 @@
 
-import type { Transaction, Account, Investment } from './types';
+import type { Transaction, Account, Investment, UpcomingPayment } from './types';
 
 export let transactions: Transaction[] = [];
 
@@ -40,6 +40,23 @@ export let investments: Investment[] = [
     { id: 'inv1', name: 'Villa in Project' },
     { id: 'inv2', name: 'Startup Fund' },
 ];
+
+export let upcomingPayments: UpcomingPayment[] = [
+  { id: 'up1', date: '2024-08-05', name: 'Rent', status: 'Upcoming' },
+  { id: 'up2', date: '2024-08-10', name: 'Car Insurance', status: 'Scheduled' },
+  { id: 'up3', date: '2024-08-15', name: 'Credit Card Due', status: 'Paid' },
+];
+
+export function updateUpcomingPaymentStatus(id: string, status: UpcomingPayment['status']) {
+  const paymentIndex = upcomingPayments.findIndex(p => p.id === id);
+  if (paymentIndex !== -1) {
+    upcomingPayments[paymentIndex].status = status;
+  }
+}
+
+export function deleteUpcomingPayment(id: string) {
+    upcomingPayments = upcomingPayments.filter(p => p.id !== id);
+}
 
 
 export function addInvestment(investment: Omit<Investment, 'id'>) {
