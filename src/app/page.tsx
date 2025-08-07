@@ -30,7 +30,7 @@ function StatCard({ title, value }: { title: string; value: string }) {
 export default function DashboardPage() {
   const walidTransactions = useMemo(() => {
     return transactions.filter(t => t.assignedTo === 'Walid');
-  }, []);
+  }, [transactions]);
 
   const {
     totalIncome,
