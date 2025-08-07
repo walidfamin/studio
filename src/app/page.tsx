@@ -1,6 +1,5 @@
 
 
-
 'use client';
 import { transactions, investments, accounts } from '@/lib/data';
 import { useMemo } from 'react';
