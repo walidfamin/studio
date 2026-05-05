@@ -59,10 +59,10 @@ export function SavingsChart() {
               <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
               <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${Number(value) / 1000}k`} />
               <Tooltip
-                content={<ChartTooltipContent formatter={(value: number, name, props) => (
+                content={<ChartTooltipContent formatter={(value, name, props) => (
                     <div className="flex flex-col">
                         <span>{props.payload.month}</span>
-                        <span className="font-bold">{value.toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</span>
+                        <span className="font-bold">{Number(value).toLocaleString('en-AE', { style: 'currency', currency: 'AED' })}</span>
                     </div>
                 )} hideLabel />}
               />

@@ -69,7 +69,7 @@ export function CumulativeSavings({ transactions }: { transactions: Transaction[
               <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
               <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} tickFormatter={(value) => `${Number(value) / 1000}k`} />
               <Tooltip
-                content={<ChartTooltipContent formatter={(value) => formatCurrency(value)} />}
+                content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
               />
               <Area type="monotone" dataKey="savings" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#colorSavings)" name="Savings" dot={false} />
             </AreaChart>

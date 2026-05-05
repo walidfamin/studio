@@ -123,11 +123,11 @@ export function SpendingBreakdown({ transactions }: { transactions: Transaction[
                         content={
                         <ChartTooltipContent
                             hideLabel
-                            formatter={(value: number, name, props) => {
+                            formatter={(value, name, props) => {
                             return (
                                 <div className='flex flex-col items-center'>
                                 <span className='text-muted-foreground'>{props.payload.category}</span>
-                                <span className='font-bold'>{formatCurrency(value)}</span>
+                                <span className='font-bold'>{formatCurrency(Number(value))}</span>
                                 </div>
                             )
                             }}

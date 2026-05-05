@@ -69,7 +69,7 @@ export function TransactionsOverTime({ transactions }: { transactions: Transacti
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
               <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${Number(value) / 1000}k`} hide />
-              <Tooltip content={<ChartTooltipContent formatter={(value: number) => formatCurrency(value)} />} />
+              <Tooltip content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />} />
               <Legend />
               <Line type="monotone" dataKey="income" stroke="hsl(var(--chart-1))" strokeWidth={2} name="Income" dot={false} />
               <Line type="monotone" dataKey="expenses" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Expenses" dot={false} />

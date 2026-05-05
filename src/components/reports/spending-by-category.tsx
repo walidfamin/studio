@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@/components/ui/button';
 import { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, type Interval } from 'date-fns';
 import { ChevronDown } from 'lucide-react';
 
 type Period = 'weekly' | 'monthly' | 'yearly';
@@ -103,7 +103,7 @@ export function SpendingByCategory({ transactions }: { transactions: Transaction
                                 tick={{ fontSize: 12 }}
                                 interval={0}
                             />
-                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                             <Bar dataKey="total" fill="hsl(var(--primary))" name="Total Spent" />
                         </BarChart>
                     </ResponsiveContainer>

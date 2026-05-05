@@ -54,7 +54,7 @@ export function HighestMonthlyExpenses({ transactions }: { transactions: Transac
                     <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} tickFormatter={(value) => `${Number(value) / 1000}k`} hide/>
                     <Tooltip 
                         cursor={{fill: 'hsla(var(--primary), 0.1)'}}
-                        content={<ChartTooltipContent formatter={(value) => formatCurrency(value)} />} 
+                        content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />} 
                     />
                     <Bar dataKey="expenses" fill="hsl(var(--primary), 0.5)" radius={[4, 4, 0, 0]}>
                        {/* You can add logic here to highlight the highest bar if desired */}

@@ -81,7 +81,13 @@ const createTransactionId = (t: Omit<Transaction, 'id'>): string => {
 };
 
 
-export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
+type AccountDetailPageProps = {
+    params: Promise<{ accountId: string }>;
+};
+
+type CategorySelection = Transaction['category'] | 'Other' | 'Transfer' | '';
+
+export default function AccountDetailPage({ params }: AccountDetailPageProps) {
     const accountId = use(params).accountId;
     const [accountDetails, setAccountDetails] = useState<Account | undefined>();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,7 +95,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<Transaction['category'] | 'Other' | 'Transfer'>('');
+    const [selectedCategory, setSelectedCategory] = useState<CategorySelection>('');
     const [customCategory, setCustomCategory] = useState<string>('');
     const [transferToAccount, setTransferToAccount] = useState<string>('');
     const [investmentId, setInvestmentId] = useState<string>('');

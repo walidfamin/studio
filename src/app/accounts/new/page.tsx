@@ -1,4 +1,5 @@
 'use client';
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-export default function NewAccountPage() {
+function NewAccountForm() {
     const searchParams = useSearchParams();
     const bank = searchParams.get('bank');
 
@@ -62,5 +63,13 @@ export default function NewAccountPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+export default function NewAccountPage() {
+    return (
+        <Suspense fallback={<div className="p-4 sm:p-6 lg:p-8">Loading account form...</div>}>
+            <NewAccountForm />
+        </Suspense>
     );
 }
